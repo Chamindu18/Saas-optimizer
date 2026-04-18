@@ -3,6 +3,10 @@
  * 
  * Contains all business logic related to licenses.
  * Handles core features like idle detection, spend calculation, etc.
+ * 
+ * IMPORTANT: All LicenseModel calls use 'await' because Model functions return Promises.
+ * Without await, functions return unresolved Promises instead of actual data.
+ * This ensures data flows correctly: Controller → Service (await) → Model (await) → Database
  */
 
 import LicenseModel from '../models/License.js';
@@ -11,10 +15,24 @@ import UserModel from '../models/User.js';
 
 /**
  * Get all licenses
+ * Automatically updates status based on idle logic
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from LicenseModel
  */
 const getAllLicenses = async () => {
   try {
-    return LicenseModel.getAllLicenses();
+    let licenses = await LicenseModel.getAllLicenses();
+    
+    // Update status based on idle logic (if status was 'active')
+    licenses = licenses.map(license => {
+      if (license.status === 'active') {
+        const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
+        return { ...license, status: calculatedStatus };
+      }
+      return license;
+    });
+    
+    return licenses;
   } catch (error) {
     throw new Error(`Failed to fetch licenses: ${error.message}`);
   }
@@ -22,13 +40,28 @@ const getAllLicenses = async () => {
 
 /**
  * Get license by ID
+ * Automatically updates status based on idle logic
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from LicenseModel
  */
 const getLicenseById = async (licenseId) => {
   try {
     if (!licenseId) {
       throw new Error('License ID is required');
     }
-    return LicenseModel.getLicenseById(Number(licenseId));
+    let license = await LicenseModel.getLicenseById(Number(licenseId));
+    
+    if (!license) {
+      return null;
+    }
+    
+    // Update status based on idle logic (if status was 'active')
+    if (license.status === 'active') {
+      const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
+      license = { ...license, status: calculatedStatus };
+    }
+    
+    return license;
   } catch (error) {
     throw new Error(`Failed to fetch license: ${error.message}`);
   }
@@ -37,6 +70,8 @@ const getLicenseById = async (licenseId) => {
 /**
  * Assign a license to a user
  * Creates a new license linking a user to software
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from Model calls
  */
 const assignLicense = async (licenseData) => {
   try {
@@ -45,19 +80,20 @@ const assignLicense = async (licenseData) => {
       throw new Error('User ID and Software ID are required');
     }
 
-    // Check if user exists
-    const user = UserModel.getUserById(Number(licenseData.user_id));
+    // Check if user exists (must await!)
+    const user = await UserModel.getUserById(Number(licenseData.user_id));
     if (!user) {
       throw new Error('User not found');
     }
 
-    // Check if software exists
-    const software = SoftwareModel.getSoftwareById(Number(licenseData.software_id));
+    // Check if software exists (must await!)
+    const software = await SoftwareModel.getSoftwareById(Number(licenseData.software_id));
     if (!software) {
       throw new Error('Software not found');
     }
 
-    return LicenseModel.createLicense(licenseData);
+    const newLicense = await LicenseModel.createLicense(licenseData);
+    return newLicense;
   } catch (error) {
     throw new Error(`Failed to assign license: ${error.message}`);
   }
@@ -65,6 +101,8 @@ const assignLicense = async (licenseData) => {
 
 /**
  * Update a license
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
  */
 const updateLicense = async (licenseId, licenseData) => {
   try {
@@ -72,12 +110,13 @@ const updateLicense = async (licenseId, licenseData) => {
       throw new Error('License ID is required');
     }
 
-    const license = LicenseModel.getLicenseById(Number(licenseId));
+    const license = await LicenseModel.getLicenseById(Number(licenseId));
     if (!license) {
       throw new Error('License not found');
     }
 
-    return LicenseModel.updateLicense(Number(licenseId), licenseData);
+    const updatedLicense = await LicenseModel.updateLicense(Number(licenseId), licenseData);
+    return updatedLicense;
   } catch (error) {
     throw new Error(`Failed to update license: ${error.message}`);
   }
@@ -86,6 +125,8 @@ const updateLicense = async (licenseId, licenseData) => {
 /**
  * Prune (delete) a license
  * When a license is removed, its status changes to "pruned"
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
  */
 const pruneLicense = async (licenseId) => {
   try {
@@ -93,12 +134,18 @@ const pruneLicense = async (licenseId) => {
       throw new Error('License ID is required');
     }
 
-    const license = LicenseModel.getLicenseById(Number(licenseId));
+    const license = await LicenseModel.getLicenseById(Number(licenseId));
     if (!license) {
       throw new Error('License not found');
     }
 
-    return LicenseModel.updateLicense(Number(licenseId), { status: 'pruned' });
+    return await LicenseModel.updateLicense(Number(licenseId), { 
+      user_id: license.user_id,
+      software_id: license.software_id,
+      assigned_date: license.assigned_date,
+      last_active_date: license.last_active_date,
+      status: 'pruned'
+    });
   } catch (error) {
     throw new Error(`Failed to prune license: ${error.message}`);
   }
@@ -106,6 +153,8 @@ const pruneLicense = async (licenseId) => {
 
 /**
  * Delete a license
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
  */
 const deleteLicense = async (licenseId) => {
   try {
@@ -113,12 +162,12 @@ const deleteLicense = async (licenseId) => {
       throw new Error('License ID is required');
     }
 
-    const license = LicenseModel.getLicenseById(Number(licenseId));
+    const license = await LicenseModel.getLicenseById(Number(licenseId));
     if (!license) {
       throw new Error('License not found');
     }
 
-    return LicenseModel.deleteLicense(Number(licenseId));
+    return await LicenseModel.deleteLicense(Number(licenseId));
   } catch (error) {
     throw new Error(`Failed to delete license: ${error.message}`);
   }
@@ -129,19 +178,21 @@ const deleteLicense = async (licenseId) => {
  * Sum of all active licenses
  * 
  * Formula: Sum of (license.software.price_per_seat) for all active licenses
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from getAllLicenses
  */
 const calculateTotalSpend = async () => {
   try {
-    const licenses = LicenseModel.getAllLicenses();
+    const licenses = await LicenseModel.getAllLicenses();
     const activeLicenses = licenses.filter(license => license.status === 'active');
 
     let totalSpend = 0;
-    activeLicenses.forEach(license => {
-      const software = SoftwareModel.getSoftwareById(license.software_id);
+    for (const license of activeLicenses) {
+      const software = await SoftwareModel.getSoftwareById(license.software_id);
       if (software) {
         totalSpend += software.price_per_seat;
       }
-    });
+    }
 
     return {
       totalSpend: parseFloat(totalSpend.toFixed(2)),
@@ -157,17 +208,20 @@ const calculateTotalSpend = async () => {
  * A license is idle if last_active_date is more than 30 days old
  * 
  * Returns licenses that are currently active but haven't been used in 30+ days
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from getAllLicenses
  */
 const detectIdleLicenses = async () => {
   try {
-    const licenses = LicenseModel.getAllLicenses();
-    const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const licenses = await LicenseModel.getAllLicenses();
 
     const idleLicenses = licenses.filter(license => {
-      // Only check active licenses that haven't been used recently
+      // Only check active licenses
       if (license.status !== 'active') return false;
-      return new Date(license.last_active_date) < thirtyDaysAgo;
+      
+      // Use the model's checkIfIdle logic
+      const idleStatus = LicenseModel.checkIfIdle(license.last_active_date);
+      return idleStatus === 'idle';
     });
 
     return idleLicenses;
@@ -179,18 +233,20 @@ const detectIdleLicenses = async () => {
 /**
  * Calculate potential savings
  * Sum of costs of all idle licenses
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from detectIdleLicenses
  */
 const calculatePotentialSavings = async () => {
   try {
     const idleLicenses = await detectIdleLicenses();
 
     let potentialSavings = 0;
-    idleLicenses.forEach(license => {
-      const software = SoftwareModel.getSoftwareById(license.software_id);
+    for (const license of idleLicenses) {
+      const software = await SoftwareModel.getSoftwareById(license.software_id);
       if (software) {
         potentialSavings += software.price_per_seat;
       }
-    });
+    }
 
     return {
       potentialSavings: parseFloat(potentialSavings.toFixed(2)),
@@ -205,6 +261,8 @@ const calculatePotentialSavings = async () => {
 /**
  * Get dashboard data
  * Returns key metrics: total spend, idle count, and potential savings
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from service functions
  */
 const getDashboardData = async () => {
   try {

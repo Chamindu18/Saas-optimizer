@@ -3,16 +3,23 @@
  * 
  * Contains all business logic related to software/tools.
  * Services abstract the database operations and are used by controllers.
+ * 
+ * IMPORTANT: All SoftwareModel calls use 'await' because Model functions return Promises.
+ * Without await, functions return unresolved Promises instead of actual data.
+ * This ensures data flows correctly: Controller → Service (await) → Model (await) → Database
  */
 
 import SoftwareModel from '../models/Software.js';
 
 /**
  * Get all software
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from SoftwareModel
  */
 const getAllSoftware = async () => {
   try {
-    return SoftwareModel.getAllSoftware();
+    const softwares = await SoftwareModel.getAllSoftware();
+    return softwares;
   } catch (error) {
     throw new Error(`Failed to fetch software: ${error.message}`);
   }
@@ -20,13 +27,16 @@ const getAllSoftware = async () => {
 
 /**
  * Get software by ID
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from SoftwareModel
  */
 const getSoftwareById = async (softwareId) => {
   try {
     if (!softwareId) {
       throw new Error('Software ID is required');
     }
-    return SoftwareModel.getSoftwareById(Number(softwareId));
+    const software = await SoftwareModel.getSoftwareById(Number(softwareId));
+    return software;
   } catch (error) {
     throw new Error(`Failed to fetch software: ${error.message}`);
   }
@@ -35,6 +45,8 @@ const getSoftwareById = async (softwareId) => {
 /**
  * Create new software
  * Validates input and creates a new software record
+ * 
+ * CRITICAL FIX: Added 'await' to resolve the Promise from SoftwareModel
  */
 const createSoftware = async (softwareData) => {
   try {
@@ -47,7 +59,8 @@ const createSoftware = async (softwareData) => {
       throw new Error('Price per seat cannot be negative');
     }
 
-    return SoftwareModel.createSoftware(softwareData);
+    const newSoftware = await SoftwareModel.createSoftware(softwareData);
+    return newSoftware;
   } catch (error) {
     throw new Error(`Failed to create software: ${error.message}`);
   }
@@ -55,6 +68,8 @@ const createSoftware = async (softwareData) => {
 
 /**
  * Update software
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from SoftwareModel
  */
 const updateSoftware = async (softwareId, softwareData) => {
   try {
@@ -62,12 +77,14 @@ const updateSoftware = async (softwareId, softwareData) => {
       throw new Error('Software ID is required');
     }
 
-    const software = SoftwareModel.getSoftwareById(Number(softwareId));
+    // Check if software exists (must await the Promise!)
+    const software = await SoftwareModel.getSoftwareById(Number(softwareId));
     if (!software) {
       throw new Error('Software not found');
     }
 
-    return SoftwareModel.updateSoftware(Number(softwareId), softwareData);
+    const updatedSoftware = await SoftwareModel.updateSoftware(Number(softwareId), softwareData);
+    return updatedSoftware;
   } catch (error) {
     throw new Error(`Failed to update software: ${error.message}`);
   }
@@ -75,6 +92,8 @@ const updateSoftware = async (softwareId, softwareData) => {
 
 /**
  * Delete software
+ * 
+ * CRITICAL FIX: Added 'await' to resolve Promises from SoftwareModel
  */
 const deleteSoftware = async (softwareId) => {
   try {
@@ -82,12 +101,14 @@ const deleteSoftware = async (softwareId) => {
       throw new Error('Software ID is required');
     }
 
-    const software = SoftwareModel.getSoftwareById(Number(softwareId));
+    // Check if software exists before deleting (must await the Promise!)
+    const software = await SoftwareModel.getSoftwareById(Number(softwareId));
     if (!software) {
       throw new Error('Software not found');
     }
 
-    return SoftwareModel.deleteSoftware(Number(softwareId));
+    const deletedSoftware = await SoftwareModel.deleteSoftware(Number(softwareId));
+    return deletedSoftware;
   } catch (error) {
     throw new Error(`Failed to delete software: ${error.message}`);
   }

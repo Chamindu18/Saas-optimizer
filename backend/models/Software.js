@@ -2,98 +2,107 @@
  * Software Model
  * 
  * Represents a SaaS tool used by the company.
+ * Queries the PostgreSQL database for all operations.
  * 
  * Fields:
- * - id: Unique identifier
+ * - id: Unique identifier (auto-increment from database)
  * - name: Software name (e.g., Slack, Zoom, Adobe)
  * - category: Category (e.g., Dev, Design, Marketing)
  * - price_per_seat: Cost per license (monthly or yearly)
  */
 
-// For now, we're using mock data stored in memory
-// When connected to a real database, this will query PostgreSQL
-
-let softwares = [
-  {
-    id: 1,
-    name: 'Slack',
-    category: 'Communication',
-    price_per_seat: 8.0,
-  },
-  {
-    id: 2,
-    name: 'Zoom',
-    category: 'Communication',
-    price_per_seat: 16.99,
-  },
-  {
-    id: 3,
-    name: 'Adobe Creative Suite',
-    category: 'Design',
-    price_per_seat: 54.99,
-  },
-  {
-    id: 4,
-    name: 'GitHub Enterprise',
-    category: 'Development',
-    price_per_seat: 21.0,
-  },
-];
+import pool from '../config/db.js';
 
 /**
- * Get all software
+ * Get all software from the database
+ * Returns: Array of software objects from PostgreSQL
  */
-const getAllSoftware = () => {
-  return softwares;
+const getAllSoftware = async () => {
+  try {
+    const result = await pool.query('SELECT * FROM software ORDER BY id ASC');
+    return result.rows;
+  } catch (error) {
+    console.error('Database error in getAllSoftware:', error.message);
+    throw error;
+  }
 };
 
 /**
- * Get software by ID
+ * Get a single software by ID from the database
+ * Args: id - Software ID (number)
+ * Returns: Software object or null if not found
  */
-const getSoftwareById = (id) => {
-  return softwares.find(software => software.id === id);
+const getSoftwareById = async (id) => {
+  try {
+    const result = await pool.query('SELECT * FROM software WHERE id = $1', [id]);
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Database error in getSoftwareById:', error.message);
+    throw error;
+  }
 };
 
 /**
- * Create new software
+ * Create new software in the database
+ * Args: softwareData - Object with { name, category, price_per_seat }
+ * Returns: The newly created software object with ID
  */
-const createSoftware = (softwareData) => {
-  const newSoftware = {
-    id: softwares.length > 0 ? Math.max(...softwares.map(s => s.id)) + 1 : 1,
-    name: softwareData.name,
-    category: softwareData.category,
-    price_per_seat: softwareData.price_per_seat,
-  };
-  softwares.push(newSoftware);
-  return newSoftware;
+const createSoftware = async (softwareData) => {
+  try {
+    const { name, category, price_per_seat } = softwareData;
+    const result = await pool.query(
+      'INSERT INTO software (name, category, price_per_seat) VALUES ($1, $2, $3) RETURNING *',
+      [name, category, price_per_seat]
+    );
+    return result.rows[0];
+  } catch (error) {
+    console.error('Database error in createSoftware:', error.message);
+    throw error;
+  }
 };
 
 /**
- * Update software
+ * Update an existing software in the database
+ * Args: id - Software ID, softwareData - Object with fields to update
+ * Returns: The updated software object
  */
-const updateSoftware = (id, softwareData) => {
-  const softwareIndex = softwares.findIndex(software => software.id === id);
-  if (softwareIndex === -1) return null;
-
-  softwares[softwareIndex] = {
-    ...softwares[softwareIndex],
-    ...softwareData,
-    id: softwares[softwareIndex].id, // Prevent ID from being changed
-  };
-
-  return softwares[softwareIndex];
+const updateSoftware = async (id, softwareData) => {
+  try {
+    const { name, category, price_per_seat } = softwareData;
+    const result = await pool.query(
+      'UPDATE software SET name=$1, category=$2, price_per_seat=$3 WHERE id=$4 RETURNING *',
+      [name, category, price_per_seat, id]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Database error in updateSoftware:', error.message);
+    throw error;
+  }
 };
 
 /**
- * Delete software
+ * Delete software from the database
+ * Args: id - Software ID
+ * Returns: The deleted software object
  */
-const deleteSoftware = (id) => {
-  const softwareIndex = softwares.findIndex(software => software.id === id);
-  if (softwareIndex === -1) return null;
+const deleteSoftware = async (id) => {
+  try {
+    // First fetch the software to return it
+    const selectResult = await pool.query('SELECT * FROM software WHERE id = $1', [id]);
+    const software = selectResult.rows[0];
 
-  const deletedSoftware = softwares[softwareIndex];
-  softwares.splice(softwareIndex, 1);
-  return deletedSoftware;
+    if (!software) {
+      return null;
+    }
+
+    // Then delete the software
+    await pool.query('DELETE FROM software WHERE id = $1', [id]);
+    
+    return software;
+  } catch (error) {
+    console.error('Database error in deleteSoftware:', error.message);
+    throw error;
+  }
 };
 
 export default {

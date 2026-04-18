@@ -14,7 +14,7 @@ import UserModel from '../models/User.js';
  */
 const getAllUsers = async () => {
   try {
-    return UserModel.getAllUsers();
+    return await UserModel.getAllUsers();
   } catch (error) {
     throw new Error(`Failed to fetch users: ${error.message}`);
   }
@@ -29,7 +29,7 @@ const getUserById = async (userId) => {
     if (!userId) {
       throw new Error('User ID is required');
     }
-    return UserModel.getUserById(Number(userId));
+    return await UserModel.getUserById(Number(userId));
   } catch (error) {
     throw new Error(`Failed to fetch user: ${error.message}`);
   }
@@ -50,7 +50,7 @@ const createUser = async (userData) => {
       throw new Error('Invalid email format');
     }
 
-    return UserModel.createUser(userData);
+    return await UserModel.createUser(userData);
   } catch (error) {
     throw new Error(`Failed to create user: ${error.message}`);
   }
@@ -66,12 +66,12 @@ const updateUser = async (userId, userData) => {
       throw new Error('User ID is required');
     }
 
-    const user = UserModel.getUserById(Number(userId));
+    const user = await UserModel.getUserById(Number(userId));
     if (!user) {
       throw new Error('User not found');
     }
 
-    return UserModel.updateUser(Number(userId), userData);
+    return await UserModel.updateUser(Number(userId), userData);
   } catch (error) {
     throw new Error(`Failed to update user: ${error.message}`);
   }
@@ -87,12 +87,12 @@ const deleteUser = async (userId) => {
       throw new Error('User ID is required');
     }
 
-    const user = UserModel.getUserById(Number(userId));
+    const user = await UserModel.getUserById(Number(userId));
     if (!user) {
       throw new Error('User not found');
     }
 
-    return UserModel.deleteUser(Number(userId));
+    return await UserModel.deleteUser(Number(userId));
   } catch (error) {
     throw new Error(`Failed to delete user: ${error.message}`);
   }

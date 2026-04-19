@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import Home from './components/Home';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -8,6 +9,9 @@ import Software from './components/Software';
 import Licenses from './components/Licenses';
 
 function App() {
+  // State to track if user has entered the dashboard or viewing home
+  const [isDashboard, setIsDashboard] = useState(false);
+
   // State to track which page is currently active
   // This allows us to conditionally render different components
   const [activePage, setActivePage] = useState('dashboard');
@@ -22,6 +26,11 @@ function App() {
     };
     return titles[activePage] || 'Dashboard';
   };
+
+  // Show home page if not in dashboard, otherwise show dashboard layout
+  if (!isDashboard) {
+    return <Home onEnterDashboard={() => setIsDashboard(true)} />;
+  }
 
   // Main app layout: Sidebar on left, main content on right
   // Sidebar is fixed, main content scrolls

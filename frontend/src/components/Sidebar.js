@@ -1,8 +1,10 @@
 import React from 'react';
 
 // Sidebar component for navigation
-// Props: activeLink - current active page to highlight
-function Sidebar({ activeLink = 'dashboard' }) {
+// Props: 
+//   activePage - current active page (dashboard, users, software, licenses)
+//   setActivePage - function to change active page
+function Sidebar({ activePage = 'dashboard', setActivePage }) {
   // Array of navigation items with their labels and keys
   const navItems = [
     { key: 'dashboard', label: 'Dashboard' },
@@ -46,6 +48,7 @@ function Sidebar({ activeLink = 'dashboard' }) {
       fontWeight: '500',
       transition: 'all 0.2s ease',
       borderLeft: '4px solid transparent',
+      userSelect: 'none',
     },
     navItemActive: {
       borderLeft: '4px solid #2563eb',
@@ -66,9 +69,12 @@ function Sidebar({ activeLink = 'dashboard' }) {
         {navItems.map((item) => (
           <div
             key={item.key}
+            // onClick handler to change the active page when user clicks
+            onClick={() => setActivePage(item.key)}
+            // Apply active style if this item matches activePage
             style={{
               ...sidebarStyles.navItem,
-              ...(activeLink === item.key ? sidebarStyles.navItemActive : {}),
+              ...(activePage === item.key ? sidebarStyles.navItemActive : {}),
             }}
           >
             {item.label}

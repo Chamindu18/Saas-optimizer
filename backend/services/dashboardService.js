@@ -1,30 +1,165 @@
 /**
  * Dashboard Service
- * 
- * Contains all analytics and reporting logic for the dashboard.
- * Calculates key metrics like total spend, idle licenses, and potential savings.
- * 
- * Uses SQL JOINs to efficiently query across multiple tables.
+ * Calculates analytics: total spend, potential savings, idle users
  */
 
 import pool from '../config/db.js';
 import LicenseModel from '../models/License.js';
 
-/**
- * Calculate Total Spend
- * 
- * QUERY: Joins licenses with software to sum up the cost of all ACTIVE licenses
- * SQL: SELECT SUM(software.price_per_seat) FROM licenses 
- *      JOIN software ON licenses.software_id = software.id 
- *      WHERE licenses.status = 'active'
- * 
- * Returns: { totalSpend: number }
- */
 const getTotalSpend = async () => {
-  try {\n    const query = `
+  try {
+    const query = `
       SELECT COALESCE(SUM(software.price_per_seat), 0) as total_spend
       FROM licenses
       JOIN software ON licenses.software_id = software.id
       WHERE licenses.status = 'active'
-    `;\n    const result = await pool.query(query);
-    const totalSpend = parseFloat(result.rows[0].total_spend).toFixed(2);\n    return {\n      totalSpend: parseFloat(totalSpend),\n    };\n  } catch (error) {\n    console.error('Database error in getTotalSpend:', error.message);\n    throw new Error(`Failed to calculate total spend: ${error.message}`);\n  }\n};\n\n/**\n * Calculate Potential Savings\n * \n * QUERY: Joins licenses with software to sum up the cost of all IDLE licenses\n * SQL: SELECT SUM(software.price_per_seat) FROM licenses \n *      JOIN software ON licenses.software_id = software.id \n *      WHERE licenses.status = 'idle'\n * \n * Returns: { potentialSavings: number }\n */\nconst getPotentialSavings = async () => {\n  try {\n    const query = `\n      SELECT COALESCE(SUM(software.price_per_seat), 0) as potential_savings\n      FROM licenses\n      JOIN software ON licenses.software_id = software.id\n      WHERE licenses.status = 'idle'\n    `;\n    const result = await pool.query(query);\n    const potentialSavings = parseFloat(result.rows[0].potential_savings).toFixed(2);\n    return {\n      potentialSavings: parseFloat(potentialSavings),\n    };\n  } catch (error) {\n    console.error('Database error in getPotentialSavings:', error.message);\n    throw new Error(`Failed to calculate potential savings: ${error.message}`);\n  }\n};\n\n/**\n * Get Active License Count\n * \n * QUERY: Counts the total number of ACTIVE licenses\n * SQL: SELECT COUNT(*) FROM licenses WHERE licenses.status = 'active'\n * \n * Returns: { activeLicenses: number }\n */\nconst getActiveLicenseCount = async () => {\n  try {\n    const query = `\n      SELECT COUNT(*) as active_count\n      FROM licenses\n      WHERE licenses.status = 'active'\n    `;\n    const result = await pool.query(query);\n    const activeLicenses = parseInt(result.rows[0].active_count, 10);\n    return {\n      activeLicenses,\n    };\n  } catch (error) {\n    console.error('Database error in getActiveLicenseCount:', error.message);\n    throw new Error(`Failed to get active license count: ${error.message}`);\n  }\n};\n\n/**\n * Get Idle Users\n * \n * QUERY: Joins users, licenses, and software to find all users with IDLE licenses\n * Returns user info along with their idle licenses and the software\n * SQL: SELECT users.id, users.name, users.email, COUNT(licenses.id) as idle_count\n *      FROM users\n *      JOIN licenses ON users.id = licenses.user_id\n *      JOIN software ON licenses.software_id = software.id\n *      WHERE licenses.status = 'idle'\n *      GROUP BY users.id\n * \n * Returns: {\n *   idleUsers: [\n *     { id, name, email, idleCount, idleLicenses: [{ software_id, name, last_active_date }] }\n *   ]\n * }\n */\nconst getIdleUsers = async () => {\n  try {\n    // First, get all users with idle licenses\n    const usersQuery = `\n      SELECT DISTINCT users.id, users.name, users.email\n      FROM users\n      JOIN licenses ON users.id = licenses.user_id\n      WHERE licenses.status = 'idle'\n      ORDER BY users.id ASC\n    `;\n    const usersResult = await pool.query(usersQuery);\n    const idleUsers = [];\n\n    // For each user, get their idle licenses\n    for (const user of usersResult.rows) {\n      const licensesQuery = `\n        SELECT licenses.id, licenses.software_id, software.name as software_name, licenses.last_active_date\n        FROM licenses\n        JOIN software ON licenses.software_id = software.id\n        WHERE licenses.user_id = $1 AND licenses.status = 'idle'\n        ORDER BY licenses.last_active_date ASC\n      `;\n      const licensesResult = await pool.query(licensesQuery, [user.id]);\n\n      // Add user with their idle licenses\n      idleUsers.push({\n        id: user.id,\n        name: user.name,\n        email: user.email,\n        idleCount: licensesResult.rows.length,\n        idleLicenses: licensesResult.rows.map(license => ({\n          softwareId: license.software_id,\n          softwareName: license.software_name,\n          lastActiveDate: license.last_active_date,\n        })),\n      });\n    }\n\n    return {\n      idleUsers,\n    };\n  } catch (error) {\n    console.error('Database error in getIdleUsers:', error.message);\n    throw new Error(`Failed to get idle users: ${error.message}`);\n  }\n};\n\n/**\n * Get Complete Dashboard Data\n * \n * Combines all metrics into a single comprehensive dashboard object.\n * Automatically calculates idle status for licenses before returning data.\n * \n * Returns: {\n *   totalSpend: number,\n *   potentialSavings: number,\n *   activeLicenses: number,\n *   idleUsers: array,\n *   metrics: {\n *     percentageOfSpendBeingWasted: number (0-100),\n *     savingsOpportunity: string (formatted)\n *   }\n * }\n */\nconst getDashboardData = async () => {\n  try {\n    // Update idle status for all licenses by fetching them through LicenseModel\n    // This ensures the checkIfIdle logic is applied\n    const allLicenses = await pool.query(`\n      SELECT id, last_active_date FROM licenses WHERE status = 'active'\n    `);\n\n    // Update status for licenses that should be idle\n    for (const license of allLicenses.rows) {\n      const idleStatus = LicenseModel.checkIfIdle(license.last_active_date);\n      if (idleStatus === 'idle') {\n        await pool.query(\n          'UPDATE licenses SET status = $1 WHERE id = $2',\n          ['idle', license.id]\n        );\n      }\n    }\n\n    // Fetch all analytics in parallel\n    const [spendData, savingsData, countData, usersData] = await Promise.all([\n      getTotalSpend(),\n      getPotentialSavings(),\n      getActiveLicenseCount(),\n      getIdleUsers(),\n    ]);\n\n    // Calculate additional metrics\n    const totalSpend = spendData.totalSpend;\n    const potentialSavings = savingsData.potentialSavings;\n    const percentageOfSpendBeingWasted = totalSpend > 0\n      ? parseFloat(((potentialSavings / totalSpend) * 100).toFixed(2))\n      : 0;\n\n    // Format the savings opportunity message\n    const savingsOpportunity = potentialSavings > 0\n      ? `You can save $${potentialSavings.toFixed(2)} by removing idle licenses`\n      : 'No idle licenses to remove';\n\n    // Return comprehensive dashboard data\n    return {\n      metrics: {\n        totalSpend,\n        potentialSavings,\n        activeLicenses: countData.activeLicenses,\n        idleCount: usersData.idleUsers.reduce((sum, user) => sum + user.idleCount, 0),\n        percentageOfSpendBeingWasted,\n        savingsOpportunity,\n      },\n      users: usersData.idleUsers,\n    };\n  } catch (error) {\n    console.error('Database error in getDashboardData:', error.message);\n    throw new Error(`Failed to get dashboard data: ${error.message}`);\n  }\n};\n\n/**\n * Get License Summary by Status\n * \n * Quick overview of license distribution\n * Returns count of active, idle, and pruned licenses\n */\nconst getLicenseSummary = async () => {\n  try {\n    const query = `\n      SELECT status, COUNT(*) as count\n      FROM licenses\n      GROUP BY status\n    `;\n    const result = await pool.query(query);\n    \n    const summary = {\n      active: 0,\n      idle: 0,\n      pruned: 0,\n    };\n\n    // Map results to summary object\n    result.rows.forEach(row => {\n      if (row.status in summary) {\n        summary[row.status] = parseInt(row.count, 10);\n      }\n    });\n\n    return summary;\n  } catch (error) {\n    console.error('Database error in getLicenseSummary:', error.message);\n    throw new Error(`Failed to get license summary: ${error.message}`);\n  }\n};\n\nexport default {\n  getTotalSpend,\n  getPotentialSavings,\n  getActiveLicenseCount,\n  getIdleUsers,\n  getDashboardData,\n  getLicenseSummary,\n};
+    `;
+    const result = await pool.query(query);
+    return { totalSpend: parseFloat(result.rows[0].total_spend).toFixed(2) };
+  } catch (error) {
+    throw new Error(`Failed to calculate total spend: ${error.message}`);
+  }
+};
+
+const getPotentialSavings = async () => {
+  try {
+    const query = `
+      SELECT COALESCE(SUM(software.price_per_seat), 0) as potential_savings
+      FROM licenses
+      JOIN software ON licenses.software_id = software.id
+      WHERE licenses.status = 'idle'
+    `;
+    const result = await pool.query(query);
+    return { potentialSavings: parseFloat(result.rows[0].potential_savings).toFixed(2) };
+  } catch (error) {
+    throw new Error(`Failed to calculate potential savings: ${error.message}`);
+  }
+};
+
+const getActiveLicenseCount = async () => {
+  try {
+    const query = `
+      SELECT COUNT(*) as active_count
+      FROM licenses
+      WHERE licenses.status = 'active'
+    `;
+    const result = await pool.query(query);
+    return { activeLicenses: parseInt(result.rows[0].active_count, 10) };
+  } catch (error) {
+    throw new Error(`Failed to get active license count: ${error.message}`);
+  }
+};
+
+const getIdleUsers = async () => {
+  try {
+    const usersQuery = `
+      SELECT DISTINCT users.id, users.name, users.email
+      FROM users
+      JOIN licenses ON users.id = licenses.user_id
+      WHERE licenses.status = 'idle'
+      ORDER BY users.id ASC
+    `;
+    const usersResult = await pool.query(usersQuery);
+    const idleUsers = [];
+
+    for (const user of usersResult.rows) {
+      const licensesQuery = `
+        SELECT licenses.id, licenses.software_id, software.name as software_name, licenses.last_active_date
+        FROM licenses
+        JOIN software ON licenses.software_id = software.id
+        WHERE licenses.user_id = $1 AND licenses.status = 'idle'
+      `;
+      const licensesResult = await pool.query(licensesQuery, [user.id]);
+      
+      idleUsers.push({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        idleCount: licensesResult.rows.length,
+        idleLicenses: licensesResult.rows.map(l => ({
+          softwareId: l.software_id,
+          softwareName: l.software_name,
+          lastActiveDate: l.last_active_date,
+        })),
+      });
+    }
+
+    return { idleUsers };
+  } catch (error) {
+    throw new Error(`Failed to get idle users: ${error.message}`);
+  }
+};
+
+const getDashboardData = async () => {
+  try {
+    // Update idle status for active licenses
+    const allLicenses = await pool.query(`
+      SELECT id, last_active_date FROM licenses WHERE status = 'active'
+    `);
+
+    for (const license of allLicenses.rows) {
+      const idleStatus = LicenseModel.checkIfIdle(license.last_active_date);
+      if (idleStatus === 'idle') {
+        await pool.query('UPDATE licenses SET status = $1 WHERE id = $2', ['idle', license.id]);
+      }
+    }
+
+    const [spend, savings, count, users] = await Promise.all([
+      getTotalSpend(),
+      getPotentialSavings(),
+      getActiveLicenseCount(),
+      getIdleUsers(),
+    ]);
+
+    const totalSpend = parseFloat(spend.totalSpend);
+    const potentialSavings = parseFloat(savings.potentialSavings);
+    const percentageWasted = totalSpend > 0 ? ((potentialSavings / totalSpend) * 100).toFixed(2) : 0;
+
+    return {
+      metrics: {
+        totalSpend,
+        potentialSavings,
+        activeLicenses: count.activeLicenses,
+        idleCount: users.idleUsers.reduce((sum, u) => sum + u.idleCount, 0),
+        percentageOfSpendBeingWasted: parseFloat(percentageWasted),
+        savingsOpportunity: potentialSavings > 0 
+          ? `You can save $${potentialSavings.toFixed(2)} by removing idle licenses`
+          : 'No idle licenses to remove',
+      },
+      users: users.idleUsers,
+    };
+  } catch (error) {
+    throw new Error(`Failed to get dashboard data: ${error.message}`);
+  }
+};
+
+const getLicenseSummary = async () => {
+  try {
+    const query = `
+      SELECT status, COUNT(*) as count
+      FROM licenses
+      GROUP BY status
+    `;
+    const result = await pool.query(query);
+    const summary = { active: 0, idle: 0, pruned: 0 };
+    
+    result.rows.forEach(row => {
+      if (row.status in summary) {
+        summary[row.status] = parseInt(row.count, 10);
+      }
+    });
+
+    return summary;
+  } catch (error) {
+    throw new Error(`Failed to get license summary: ${error.message}`);
+  }
+};
+
+export default {
+  getTotalSpend,
+  getPotentialSavings,
+  getActiveLicenseCount,
+  getIdleUsers,
+  getDashboardData,
+  getLicenseSummary,
+};

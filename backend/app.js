@@ -21,6 +21,7 @@ import pool from './config/db.js';
 import userRoutes from './routes/userRoutes.js';
 import softwareRoutes from './routes/softwareRoutes.js';
 import licenseRoutes from './routes/licenseRoutes.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -74,7 +75,7 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to SaaS Management Platform API',
     version: '1.0.0',
-    documentation: 'Available endpoints: /api/users, /api/software, /api/licenses',
+    documentation: 'Available endpoints: /api/users, /api/software, /api/licenses, /api/dashboard',
   });
 });
 
@@ -90,6 +91,9 @@ app.use('/api/software', softwareRoutes);
 
 // License routes: /api/licenses
 app.use('/api/licenses', licenseRoutes);
+
+// Dashboard routes: /api/dashboard
+app.use('/api/dashboard', dashboardRoutes);
 
 // ============================================
 // ERROR HANDLING

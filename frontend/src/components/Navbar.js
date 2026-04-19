@@ -7,14 +7,16 @@ function Navbar({ title = 'Dashboard' }) {
     navbar: {
       backgroundColor: '#ffffff',
       borderBottom: '1px solid #e2e8f0',
-      padding: '20px 30px',
-      marginBottom: '30px',
+      padding: '28px 30px',
+      marginBottom: '32px',
+      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
     },
     title: {
-      fontSize: '24px',
-      fontWeight: '600',
+      fontSize: '26px',
+      fontWeight: '700',
       color: '#1e293b',
       margin: 0,
+      letterSpacing: '-0.5px',
     },
   };
 

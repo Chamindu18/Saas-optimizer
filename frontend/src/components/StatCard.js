@@ -5,29 +5,46 @@ import React from 'react';
 //   title - label for the statistic
 //   value - the actual value to display
 //   subtitle - optional subtitle below value
-function StatCard({ title, value, subtitle }) {
+//   color - optional color theme (blue, green, purple, neutral)
+function StatCard({ title, value, subtitle, color = 'blue' }) {
+  // Define color accents for different stat types
+  const colorThemes = {
+    blue: '#3b82f6',
+    green: '#10b981',
+    purple: '#8b5cf6',
+    neutral: '#6366f1',
+  };
+  const selectedColor = colorThemes[color] || colorThemes.blue;
+
   const statCardStyles = {
     card: {
       backgroundColor: '#ffffff',
       border: '1px solid #e2e8f0',
       borderRadius: '8px',
-      padding: '24px',
-      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
-      transition: 'all 0.2s ease',
+      padding: '28px',
+      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+      transition: 'all 0.3s ease',
+      borderTop: `4px solid ${selectedColor}`,
+      cursor: 'default',
+    },
+    cardHover: {
+      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+      transform: 'translateY(-2px)',
     },
     title: {
-      fontSize: '12px',
-      fontWeight: '500',
-      color: '#64748b',
+      fontSize: '11px',
+      fontWeight: '600',
+      color: '#94a3b8',
       textTransform: 'uppercase',
-      letterSpacing: '0.5px',
-      margin: '0 0 12px 0',
+      letterSpacing: '0.6px',
+      margin: '0 0 16px 0',
     },
     value: {
-      fontSize: '36px',
+      fontSize: '44px',
       fontWeight: '700',
-      color: '#2563eb',
-      margin: '0 0 8px 0',
+      color: '#1e293b',
+      margin: '0 0 12px 0',
+      lineHeight: '1.1',
     },
     subtitle: {
       fontSize: '13px',
@@ -36,8 +53,17 @@ function StatCard({ title, value, subtitle }) {
     },
   };
 
+  const [isHovered, setIsHovered] = React.useState(false);
+
   return (
-    <div style={statCardStyles.card}>
+    <div 
+      style={{
+        ...statCardStyles.card,
+        ...(isHovered ? statCardStyles.cardHover : {}),
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
       <p style={statCardStyles.title}>{title}</p>
       <h3 style={statCardStyles.value}>{value}</h3>
       {subtitle && <p style={statCardStyles.subtitle}>{subtitle}</p>}

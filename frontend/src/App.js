@@ -51,12 +51,13 @@ const appStyles = {
   appContainer: {
     display: 'flex',
     minHeight: '100vh',
-    backgroundColor: '#f8fafc',
+    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%)',
   },
   mainContent: {
     marginLeft: '250px', // Account for fixed sidebar width
     flex: 1,
     overflowY: 'auto',
+    background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%)',
   },
 };
 

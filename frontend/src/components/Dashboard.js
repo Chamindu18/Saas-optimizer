@@ -13,6 +13,9 @@ function Dashboard() {
   // State to store error message if API call fails
   const [error, setError] = useState(null);
 
+  // State for hover effect on users section
+  const [isUsersCardHovered, setIsUsersCardHovered] = useState(false);
+
   // useEffect runs once when component mounts (empty dependency array)
   // This is where we fetch dashboard data from the backend API
   useEffect(() => {
@@ -64,21 +67,31 @@ function Dashboard() {
           title="Total Spend" 
           value={`$${totalSpend ? totalSpend.toFixed(2) : '0.00'}`}
           subtitle="Active licenses"
+          color="blue"
         />
         <StatCard 
           title="Potential Savings" 
           value={`$${potentialSavings ? potentialSavings.toFixed(2) : '0.00'}`}
           subtitle="From unused licenses"
+          color="green"
         />
         <StatCard 
           title="Active Licenses" 
           value={activeLicenses || '0'}
           subtitle="In use"
+          color="purple"
         />
       </div>
 
-      {/* Idle Users Section */}
-      <div style={dashboardStyles.usersSection}>
+      {/* Idle Users Section with Hover Effect */}
+      <div
+        style={{
+          ...dashboardStyles.usersSection,
+          ...(isUsersCardHovered && dashboardStyles.usersSectionHover),
+        }}
+        onMouseEnter={() => setIsUsersCardHovered(true)}
+        onMouseLeave={() => setIsUsersCardHovered(false)}
+      >
         <h2 style={dashboardStyles.sectionTitle}>
           Idle Users ({idleUsers ? idleUsers.length : 0})
         </h2>
@@ -98,10 +111,9 @@ function Dashboard() {
                 {idleUsers.map((user, index) => (
                   <tr 
                     key={user.id} 
-                    style={{
-                      ...dashboardStyles.tableRow,
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
-                    }}
+                    style={dashboardStyles.tableRow}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#fafbfc'}
                   >
                     <td style={dashboardStyles.tableCell}>{user.name}</td>
                     <td style={dashboardStyles.tableCell}>{user.email}</td>
@@ -126,25 +138,32 @@ function Dashboard() {
 // Styles object for Dashboard component
 const dashboardStyles = {
   container: {
-    padding: '30px',
+    padding: '32px',
   },
   statsGrid: {
     display: 'grid',
     gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-    gap: '20px',
+    gap: '24px',
     marginBottom: '40px',
   },
   usersSection: {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    padding: '24px',
+    padding: '28px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.3s ease',
+  },
+  usersSectionHover: {
+    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+    transform: 'translateY(-2px)',
   },
   sectionTitle: {
-    fontSize: '16px',
-    fontWeight: '600',
+    fontSize: '18px',
+    fontWeight: '700',
     color: '#1e293b',
-    margin: '0 0 20px 0',
+    margin: '0 0 24px 0',
+    letterSpacing: '-0.3px',
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -158,19 +177,20 @@ const dashboardStyles = {
   },
   tableHeader: {
     textAlign: 'left',
-    padding: '12px 16px',
-    fontWeight: '600',
-    fontSize: '12px',
+    padding: '14px 16px',
+    fontWeight: '700',
+    fontSize: '11px',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.6px',
+    backgroundColor: '#f8fafc',
   },
   tableRow: {
     borderBottom: '1px solid #f1f5f9',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.15s ease',
   },
   tableCell: {
-    padding: '14px 16px',
+    padding: '16px',
     fontSize: '13px',
     color: '#1e293b',
   },
@@ -178,22 +198,22 @@ const dashboardStyles = {
     display: 'inline-block',
     backgroundColor: '#fee2e2',
     color: '#dc2626',
-    padding: '4px 8px',
+    padding: '6px 12px',
     borderRadius: '4px',
     fontSize: '12px',
     fontWeight: '500',
   },
   loadingContainer: {
-    padding: '30px',
+    padding: '32px',
     color: '#64748b',
     fontSize: '14px',
   },
   errorContainer: {
-    padding: '30px',
+    padding: '32px',
     fontSize: '14px',
   },
   emptyContainer: {
-    padding: '30px',
+    padding: '32px',
     color: '#64748b',
     fontSize: '14px',
   },
@@ -201,6 +221,8 @@ const dashboardStyles = {
     color: '#94a3b8',
     fontSize: '14px',
     margin: 0,
+    textAlign: 'center',
+    padding: '40px 20px',
   },
 };
 

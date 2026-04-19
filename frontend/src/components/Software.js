@@ -12,6 +12,9 @@ function Software() {
   // State to store error message if API call fails
   const [error, setError] = useState(null);
 
+  // State for card hover effect
+  const [isCardHovered, setIsCardHovered] = useState(false);
+
   // useEffect runs once when component mounts (empty dependency array)
   // This is where we fetch software data from the backend API
   useEffect(() => {
@@ -62,7 +65,14 @@ function Software() {
       </div>
 
       {/* Software Table Card */}
-      <div style={pageStyles.card}>
+      <div 
+        style={{
+          ...pageStyles.card,
+          ...(isCardHovered && pageStyles.cardHover),
+        }}
+        onMouseEnter={() => setIsCardHovered(true)}
+        onMouseLeave={() => setIsCardHovered(false)}
+      >
         {software.length > 0 ? (
           <div style={pageStyles.tableWrapper}>
             <table style={pageStyles.table}>
@@ -78,10 +88,9 @@ function Software() {
                 {software.map((item, index) => (
                   <tr 
                     key={item.id} 
-                    style={{
-                      ...pageStyles.tableRow,
-                      backgroundColor: index % 2 === 0 ? '#ffffff' : '#f8fafc',
-                    }}
+                    style={pageStyles.tableRow}
+                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f1f5f9'}
+                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = index % 2 === 0 ? '#ffffff' : '#fafbfc'}
                   >
                     <td style={pageStyles.tableCell}>{item.name}</td>
                     <td style={pageStyles.tableCell}>{item.category}</td>
@@ -115,16 +124,17 @@ function Software() {
 // Styles object for Software page
 const pageStyles = {
   container: {
-    padding: '30px',
+    padding: '32px',
   },
   header: {
-    marginBottom: '30px',
+    marginBottom: '32px',
   },
   title: {
-    fontSize: '28px',
-    fontWeight: '600',
+    fontSize: '26px',
+    fontWeight: '700',
     color: '#1e293b',
-    margin: '0 0 10px 0',
+    margin: '0 0 8px 0',
+    letterSpacing: '-0.3px',
   },
   subtitle: {
     fontSize: '14px',
@@ -136,7 +146,13 @@ const pageStyles = {
     backgroundColor: '#ffffff',
     border: '1px solid #e2e8f0',
     borderRadius: '8px',
-    padding: '24px',
+    padding: '28px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+    transition: 'all 0.3s ease',
+  },
+  cardHover: {
+    boxShadow: '0 8px 16px rgba(0, 0, 0, 0.1)',
+    transform: 'translateY(-2px)',
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -150,19 +166,20 @@ const pageStyles = {
   },
   tableHeader: {
     textAlign: 'left',
-    padding: '12px 16px',
-    fontWeight: '600',
-    fontSize: '12px',
+    padding: '14px 16px',
+    fontWeight: '700',
+    fontSize: '11px',
     color: '#64748b',
     textTransform: 'uppercase',
-    letterSpacing: '0.5px',
+    letterSpacing: '0.6px',
+    backgroundColor: '#f8fafc',
   },
   tableRow: {
     borderBottom: '1px solid #f1f5f9',
-    transition: 'all 0.2s ease',
+    transition: 'background-color 0.15s ease',
   },
   tableCell: {
-    padding: '14px 16px',
+    padding: '16px',
     fontSize: '13px',
     color: '#1e293b',
   },
@@ -174,10 +191,9 @@ const pageStyles = {
     padding: '40px 20px',
   },
   softwareCount: {
-    marginTop: '16px',
+    marginTop: '20px',
     fontSize: '12px',
     color: '#94a3b8',
-    margin: '16px 0 0 0',
   },
 };
 

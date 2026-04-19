@@ -15,22 +15,36 @@ import UserModel from '../models/User.js';
 
 /**
  * Get all licenses
- * Automatically updates status based on idle logic
  * 
- * CRITICAL FIX: Added 'await' to resolve the Promise from LicenseModel
+ * Automatically recalculates and updates status based on idle logic.
+ * If a license is marked 'active' but has been inactive for 30+ days:
+ * - Updates the status in the returned data
+ * - Updates the database to persist the change
  */
 const getAllLicenses = async () => {
   try {
     let licenses = await LicenseModel.getAllLicenses();
     
-    // Update status based on idle logic (if status was 'active')
-    licenses = licenses.map(license => {
+    // Loop through each license and recalculate status
+    for (const license of licenses) {
+      // Only check active licenses - don't change pruned or already idle
       if (license.status === 'active') {
+        // Get current date and check if license is idle
         const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
-        return { ...license, status: calculatedStatus };
+        
+        // If status changed from active to idle, update the database
+        if (calculatedStatus === 'idle') {
+          await LicenseModel.updateLicense(license.id, {
+            user_id: license.user_id,
+            software_id: license.software_id,
+            assigned_date: license.assigned_date,
+            last_active_date: license.last_active_date,
+            status: 'idle',  // Update status to idle in database
+          });
+          license.status = 'idle';  // Also update in returned data
+        }
       }
-      return license;
-    });
+    }
     
     return licenses;
   } catch (error) {
@@ -40,9 +54,11 @@ const getAllLicenses = async () => {
 
 /**
  * Get license by ID
- * Automatically updates status based on idle logic
  * 
- * CRITICAL FIX: Added 'await' to resolve the Promise from LicenseModel
+ * Automatically recalculates and updates status based on idle logic.
+ * If license is marked 'active' but inactive for 30+ days:
+ * - Updates the status in the returned data
+ * - Updates the database to persist the change
  */
 const getLicenseById = async (licenseId) => {
   try {
@@ -55,10 +71,21 @@ const getLicenseById = async (licenseId) => {
       return null;
     }
     
-    // Update status based on idle logic (if status was 'active')
+    // Recalculate status if license is active
     if (license.status === 'active') {
       const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
-      license = { ...license, status: calculatedStatus };
+      
+      // If status changed from active to idle, update the database
+      if (calculatedStatus === 'idle') {
+        await LicenseModel.updateLicense(Number(licenseId), {
+          user_id: license.user_id,
+          software_id: license.software_id,
+          assigned_date: license.assigned_date,
+          last_active_date: license.last_active_date,
+          status: 'idle',  // Update status to idle in database
+        });
+        license.status = 'idle';  // Also update in returned data
+      }
     }
     
     return license;

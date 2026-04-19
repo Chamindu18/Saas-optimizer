@@ -92,7 +92,7 @@ const getIdleUsers = async () => {
 
 const getDashboardData = async () => {
   try {
-    // Update idle status for active licenses
+    // First, update idle status for any active licenses that should be marked idle
     const allLicenses = await pool.query(`
       SELECT id, last_active_date FROM licenses WHERE status = 'active'
     `);
@@ -104,6 +104,7 @@ const getDashboardData = async () => {
       }
     }
 
+    // Fetch all analytics in parallel
     const [spend, savings, count, users] = await Promise.all([
       getTotalSpend(),
       getPotentialSavings(),
@@ -111,22 +112,18 @@ const getDashboardData = async () => {
       getIdleUsers(),
     ]);
 
+    // Extract calculated values
     const totalSpend = parseFloat(spend.totalSpend);
     const potentialSavings = parseFloat(savings.potentialSavings);
-    const percentageWasted = totalSpend > 0 ? ((potentialSavings / totalSpend) * 100).toFixed(2) : 0;
+    const activeLicenses = count.activeLicenses;
+    const idleUsers = users.idleUsers;
 
+    // Return clean analytics object with calculated values
     return {
-      metrics: {
-        totalSpend,
-        potentialSavings,
-        activeLicenses: count.activeLicenses,
-        idleCount: users.idleUsers.reduce((sum, u) => sum + u.idleCount, 0),
-        percentageOfSpendBeingWasted: parseFloat(percentageWasted),
-        savingsOpportunity: potentialSavings > 0 
-          ? `You can save $${potentialSavings.toFixed(2)} by removing idle licenses`
-          : 'No idle licenses to remove',
-      },
-      users: users.idleUsers,
+      totalSpend,
+      potentialSavings,
+      idleUsers,
+      activeLicenses,
     };
   } catch (error) {
     throw new Error(`Failed to get dashboard data: ${error.message}`);

@@ -1,7 +1,7 @@
 import React from 'react';
 
 // Home/Landing page component
-function Home({ onEnterDashboard }) {
+function Home({ onGoToLogin }) {
   return (
     <div style={homeStyles.container}>
       {/* Hero Section */}
@@ -14,7 +14,7 @@ function Home({ onEnterDashboard }) {
         </p>
         <button 
           style={homeStyles.primaryButton}
-          onClick={onEnterDashboard}
+          onClick={onGoToLogin}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#2563eb';
             e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
@@ -26,7 +26,7 @@ function Home({ onEnterDashboard }) {
             e.currentTarget.style.transform = 'translateY(0)';
           }}
         >
-          Go to Dashboard
+          Sign In
         </button>
       </div>
 

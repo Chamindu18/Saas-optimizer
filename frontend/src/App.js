@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import Home from './components/Home';
+import Login from './components/Login';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -9,8 +10,11 @@ import Software from './components/Software';
 import Licenses from './components/Licenses';
 
 function App() {
-  // State to track if user has entered the dashboard or viewing home
-  const [isDashboard, setIsDashboard] = useState(false);
+  // State to track if user is logged in
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // State to track if user is on login page
+  const [showLogin, setShowLogin] = useState(false);
 
   // State to track which page is currently active
   // This allows us to conditionally render different components
@@ -27,9 +31,19 @@ function App() {
     return titles[activePage] || 'Dashboard';
   };
 
-  // Show home page if not in dashboard, otherwise show dashboard layout
-  if (!isDashboard) {
-    return <Home onEnterDashboard={() => setIsDashboard(true)} />;
+  // Show home page if not logged in and not on login page
+  if (!isLoggedIn && !showLogin) {
+    return <Home onGoToLogin={() => setShowLogin(true)} />;
+  }
+
+  // Show login page if not logged in but user wants to login
+  if (!isLoggedIn && showLogin) {
+    return (
+      <Login 
+        onLogin={() => setIsLoggedIn(true)}
+        onBackToHome={() => setShowLogin(false)}
+      />
+    );
   }
 
   // Main app layout: Sidebar on left, main content on right

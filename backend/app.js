@@ -18,6 +18,7 @@ import dotenv from 'dotenv';
 import pool from './config/db.js';
 
 // Import routes
+import authRoutes from './routes/auth.js';
 import userRoutes from './routes/userRoutes.js';
 import softwareRoutes from './routes/softwareRoutes.js';
 import licenseRoutes from './routes/licenseRoutes.js';
@@ -82,6 +83,9 @@ app.get('/', (req, res) => {
 // ============================================
 // API ROUTES
 // ============================================
+
+// Auth routes: /api/auth (public - no authentication required)
+app.use('/api/auth', authRoutes);
 
 // User routes: /api/users
 app.use('/api/users', userRoutes);

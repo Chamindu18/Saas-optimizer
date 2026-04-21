@@ -1,7 +1,10 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 // Home/Landing page component
-function Home({ onGoToLogin }) {
+function Home() {
+  const navigate = useNavigate();
+
   return (
     <div style={homeStyles.container}>
       {/* Hero Section */}
@@ -14,7 +17,7 @@ function Home({ onGoToLogin }) {
         </p>
         <button 
           style={homeStyles.primaryButton}
-          onClick={onGoToLogin}
+          onClick={() => navigate('/login')}
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#2563eb';
             e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';

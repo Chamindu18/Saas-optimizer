@@ -1,21 +1,28 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 
 // Register page component
-function Register({ onRegister, onBackToLogin }) {
+function Register() {
+  const navigate = useNavigate();
+  
   // State for form fields
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   
-  // State for validation errors
+  // State for validation errors and API errors
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Validate form inputs
   const validateForm = () => {
     const newErrors = {};
     
     if (!name.trim()) {
-      newErrors.name = 'Name is required';
+      newErrors.name = 'Full name is required';
     } else if (name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
     }
@@ -31,19 +38,46 @@ function Register({ onRegister, onBackToLogin }) {
     } else if (password.length < 6) {
       newErrors.password = 'Password must be at least 6 characters';
     }
+
+    if (!confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle register form submission
-  const handleRegister = (e) => {
+  // Handle register form submission - calls backend API
+  const handleRegister = async (e) => {
     e.preventDefault();
     
-    if (validateForm()) {
-      // Simulate register (no backend call yet)
-      console.log('Register attempt:', { name, email, password });
-      onRegister();
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError('');
+
+    try {
+      // Call POST /api/auth/register endpoint
+      const response = await api.post('/auth/register', {
+        name,
+        email,
+        password,
+      });
+
+      if (response.data.success) {
+        // Redirect to login page on success
+        navigate('/login');
+      }
+    } catch (error) {
+      // Show error message to user
+      const errorMessage = error.response?.data?.error || 'Registration failed. Please try again.';
+      setApiError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -53,8 +87,15 @@ function Register({ onRegister, onBackToLogin }) {
       <div style={registerStyles.card}>
         <h1 style={registerStyles.title}>Create Account</h1>
         <p style={registerStyles.subtitle}>
-          Sign up to get started with our platform
+          Sign up to get started with SeatWatch
         </p>
+
+        {/* API Error Message */}
+        {apiError && (
+          <div style={registerStyles.errorBanner}>
+            {apiError}
+          </div>
+        )}
 
         {/* Register Form */}
         <form onSubmit={handleRegister} style={registerStyles.form}>
@@ -81,6 +122,7 @@ function Register({ onRegister, onBackToLogin }) {
                 e.currentTarget.style.borderColor = errors.name ? '#dc2626' : '#e2e8f0';
                 e.currentTarget.style.boxShadow = 'none';
               }}
+              disabled={isLoading}
             />
             {errors.name && (
               <p style={registerStyles.errorText}>{errors.name}</p>
@@ -110,6 +152,7 @@ function Register({ onRegister, onBackToLogin }) {
                 e.currentTarget.style.borderColor = errors.email ? '#dc2626' : '#e2e8f0';
                 e.currentTarget.style.boxShadow = 'none';
               }}
+              disabled={isLoading}
             />
             {errors.email && (
               <p style={registerStyles.errorText}>{errors.email}</p>
@@ -128,7 +171,7 @@ function Register({ onRegister, onBackToLogin }) {
                 ...registerStyles.input,
                 ...(errors.password && registerStyles.inputError),
               }}
-              placeholder="Enter your password"
+              placeholder="At least 6 characters"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               onFocus={(e) => {
@@ -139,28 +182,68 @@ function Register({ onRegister, onBackToLogin }) {
                 e.currentTarget.style.borderColor = errors.password ? '#dc2626' : '#e2e8f0';
                 e.currentTarget.style.boxShadow = 'none';
               }}
+              disabled={isLoading}
             />
             {errors.password && (
               <p style={registerStyles.errorText}>{errors.password}</p>
             )}
           </div>
 
+          {/* Confirm Password Field */}
+          <div style={registerStyles.formGroup}>
+            <label style={registerStyles.label} htmlFor="confirmPassword">
+              Confirm Password
+            </label>
+            <input
+              id="confirmPassword"
+              type="password"
+              style={{
+                ...registerStyles.input,
+                ...(errors.confirmPassword && registerStyles.inputError),
+              }}
+              placeholder="Re-enter your password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#3b82f6';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.confirmPassword ? '#dc2626' : '#e2e8f0';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+              disabled={isLoading}
+            />
+            {errors.confirmPassword && (
+              <p style={registerStyles.errorText}>{errors.confirmPassword}</p>
+            )}
+          </div>
+
           {/* Register Button */}
           <button
             type="submit"
-            style={registerStyles.registerButton}
+            disabled={isLoading}
+            style={{
+              ...registerStyles.registerButton,
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+            }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#2563eb';
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#3b82f6';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
-              e.currentTarget.style.transform = 'translateY(0)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }
             }}
           >
-            Register
+            {isLoading ? 'Creating Account...' : 'Register'}
           </button>
         </form>
 
@@ -168,14 +251,16 @@ function Register({ onRegister, onBackToLogin }) {
         <div style={registerStyles.linkContainer}>
           <span style={registerStyles.linkText}>Already have an account? </span>
           <button
+            type="button"
             style={registerStyles.linkButton}
-            onClick={onBackToLogin}
+            onClick={() => navigate('/login')}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#2563eb';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = '#3b82f6';
             }}
+            disabled={isLoading}
           >
             Login
           </button>
@@ -217,6 +302,16 @@ const registerStyles = {
     margin: '0 0 32px 0',
     lineHeight: '1.6',
     fontWeight: '400',
+  },
+  errorBanner: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    padding: '12px 14px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '500',
+    marginBottom: '20px',
+    border: '1px solid #fecaca',
   },
   form: {
     marginBottom: '24px',

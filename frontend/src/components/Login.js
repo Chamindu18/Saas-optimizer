@@ -1,13 +1,20 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
+import { setToken } from '../utils/auth';
 
 // Login page component
-function Login({ onLogin, onBackToHome, onGoToRegister }) {
+function Login() {
+  const navigate = useNavigate();
+  
   // State for form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
-  // State for validation errors
+  // State for validation errors and API errors
   const [errors, setErrors] = useState({});
+  const [apiError, setApiError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   // Validate form inputs
   const validateForm = () => {
@@ -29,14 +36,37 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle login form submission
-  const handleLogin = (e) => {
+  // Handle login form submission - calls backend API
+  const handleLogin = async (e) => {
     e.preventDefault();
     
-    if (validateForm()) {
-      // Simulate login (no backend call yet)
-      console.log('Login attempt:', { email, password });
-      onLogin();
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setApiError('');
+
+    try {
+      // Call POST /api/auth/login endpoint
+      const response = await api.post('/auth/login', {
+        email,
+        password,
+      });
+
+      if (response.data.success) {
+        // Store token in localStorage
+        setToken(response.data.token);
+        
+        // Redirect to dashboard on success
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      // Show error message to user
+      const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
+      setApiError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -48,6 +78,13 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
         <p style={loginStyles.subtitle}>
           Enter your credentials to access the dashboard
         </p>
+
+        {/* API Error Message */}
+        {apiError && (
+          <div style={loginStyles.errorBanner}>
+            {apiError}
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleLogin} style={loginStyles.form}>
@@ -74,6 +111,7 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
                 e.currentTarget.style.borderColor = errors.email ? '#dc2626' : '#e2e8f0';
                 e.currentTarget.style.boxShadow = 'none';
               }}
+              disabled={isLoading}
             />
             {errors.email && (
               <p style={loginStyles.errorText}>{errors.email}</p>
@@ -103,6 +141,7 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
                 e.currentTarget.style.borderColor = errors.password ? '#dc2626' : '#e2e8f0';
                 e.currentTarget.style.boxShadow = 'none';
               }}
+              disabled={isLoading}
             />
             {errors.password && (
               <p style={loginStyles.errorText}>{errors.password}</p>
@@ -112,50 +151,45 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
           {/* Login Button */}
           <button
             type="submit"
-            style={loginStyles.loginButton}
+            disabled={isLoading}
+            style={{
+              ...loginStyles.loginButton,
+              opacity: isLoading ? 0.7 : 1,
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+            }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#2563eb';
-              e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
-              e.currentTarget.style.transform = 'translateY(-2px)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#2563eb';
+                e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#3b82f6';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
-              e.currentTarget.style.transform = 'translateY(0)';
+              if (!isLoading) {
+                e.currentTarget.style.backgroundColor = '#3b82f6';
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.2)';
+                e.currentTarget.style.transform = 'translateY(0)';
+              }
             }}
           >
-            Login
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        {/* Back to Home Button */}
-        <button
-          style={loginStyles.secondaryButton}
-          onClick={onBackToHome}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
-            e.currentTarget.style.color = '#2563eb';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#64748b';
-          }}
-        >
-          Back to Home
-        </button>
 
         {/* Register Link */}
         <div style={loginStyles.linkContainer}>
           <span style={loginStyles.linkText}>Don't have an account? </span>
           <button
+            type="button"
             style={loginStyles.linkButton}
-            onClick={onGoToRegister}
+            onClick={() => navigate('/register')}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#2563eb';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.color = '#3b82f6';
             }}
+            disabled={isLoading}
           >
             Register
           </button>
@@ -197,6 +231,16 @@ const loginStyles = {
     margin: '0 0 32px 0',
     lineHeight: '1.6',
     fontWeight: '400',
+  },
+  errorBanner: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    padding: '12px 14px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '500',
+    marginBottom: '20px',
+    border: '1px solid #fecaca',
   },
   form: {
     marginBottom: '24px',

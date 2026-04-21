@@ -10,9 +10,13 @@
  */
 
 import express from 'express';
+import authMiddleware from '../middleware/auth.js';
 import dashboardController from '../controllers/dashboardController.js';
 
 const router = express.Router();
+
+// Apply auth middleware to all routes in this router
+router.use(authMiddleware);
 
 // Get complete dashboard data (metrics, calculations, idle users)
 router.get('/', dashboardController.getDashboardData);

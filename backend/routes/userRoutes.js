@@ -13,9 +13,13 @@
  */
 
 import express from 'express';
+import authMiddleware from '../middleware/auth.js';
 import userController from '../controllers/userController.js';
 
 const router = express.Router();
+
+// Apply auth middleware to all routes in this router
+router.use(authMiddleware);
 
 // Get all users
 router.get('/', userController.getUsers);

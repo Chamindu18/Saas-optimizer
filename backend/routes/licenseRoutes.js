@@ -16,9 +16,13 @@
  */
 
 import express from 'express';
+import authMiddleware from '../middleware/auth.js';
 import licenseController from '../controllers/licenseController.js';
 
 const router = express.Router();
+
+// Apply auth middleware to all routes in this router
+router.use(authMiddleware);
 
 // Dashboard metrics (must be before :id routes to avoid confusion)
 router.get('/dashboard/metrics', licenseController.getDashboardData);

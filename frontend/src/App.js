@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import './App.css';
 import Home from './components/Home';
 import Login from './components/Login';
+import Register from './components/Register';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 import Dashboard from './components/Dashboard';
@@ -10,17 +11,15 @@ import Software from './components/Software';
 import Licenses from './components/Licenses';
 
 function App() {
-  // State to track if user is logged in
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  // State to track which page/view is currently displayed
+  // Possible values: 'home', 'login', 'register', 'dashboard'
+  const [currentPage, setCurrentPage] = useState('home');
 
-  // State to track if user is on login page
-  const [showLogin, setShowLogin] = useState(false);
+  // State to track which dashboard page is active
+  // This allows us to conditionally render different dashboard sections
+  const [activeDashboardPage, setActiveDashboardPage] = useState('dashboard');
 
-  // State to track which page is currently active
-  // This allows us to conditionally render different components
-  const [activePage, setActivePage] = useState('dashboard');
-
-  // Function to get the page title based on active page
+  // Function to get the page title based on active dashboard page
   const getPageTitle = () => {
     const titles = {
       dashboard: 'Dashboard',
@@ -28,20 +27,31 @@ function App() {
       software: 'Software',
       licenses: 'Licenses',
     };
-    return titles[activePage] || 'Dashboard';
+    return titles[activeDashboardPage] || 'Dashboard';
   };
 
-  // Show home page if not logged in and not on login page
-  if (!isLoggedIn && !showLogin) {
-    return <Home onGoToLogin={() => setShowLogin(true)} />;
+  // Show home page
+  if (currentPage === 'home') {
+    return <Home onGoToLogin={() => setCurrentPage('login')} />;
   }
 
-  // Show login page if not logged in but user wants to login
-  if (!isLoggedIn && showLogin) {
+  // Show login page
+  if (currentPage === 'login') {
     return (
       <Login 
-        onLogin={() => setIsLoggedIn(true)}
-        onBackToHome={() => setShowLogin(false)}
+        onLogin={() => setCurrentPage('dashboard')}
+        onBackToHome={() => setCurrentPage('home')}
+        onGoToRegister={() => setCurrentPage('register')}
+      />
+    );
+  }
+
+  // Show register page
+  if (currentPage === 'register') {
+    return (
+      <Register 
+        onRegister={() => setCurrentPage('login')}
+        onBackToLogin={() => setCurrentPage('login')}
       />
     );
   }
@@ -51,19 +61,19 @@ function App() {
   return (
     <div style={appStyles.appContainer}>
       {/* Fixed left sidebar with navigation */}
-      {/* Pass activePage and setActivePage to Sidebar */}
-      <Sidebar activePage={activePage} setActivePage={setActivePage} />
+      {/* Pass activeDashboardPage and setActiveDashboardPage to Sidebar */}
+      <Sidebar activePage={activeDashboardPage} setActivePage={setActiveDashboardPage} />
 
       {/* Main content area */}
       <div style={appStyles.mainContent}>
         {/* Top navbar with page title */}
         <Navbar title={getPageTitle()} />
 
-        {/* Conditionally render components based on activePage state */}
-        {activePage === 'dashboard' && <Dashboard />}
-        {activePage === 'users' && <Users />}
-        {activePage === 'software' && <Software />}
-        {activePage === 'licenses' && <Licenses />}
+        {/* Conditionally render components based on activeDashboardPage state */}
+        {activeDashboardPage === 'dashboard' && <Dashboard />}
+        {activeDashboardPage === 'users' && <Users />}
+        {activeDashboardPage === 'software' && <Software />}
+        {activeDashboardPage === 'licenses' && <Licenses />}
       </div>
     </div>
   );

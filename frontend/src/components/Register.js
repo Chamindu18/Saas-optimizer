@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
-// Login page component
-function Login({ onLogin, onBackToHome, onGoToRegister }) {
+// Register page component
+function Register({ onRegister, onBackToLogin }) {
   // State for form fields
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -12,6 +13,12 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
   // Validate form inputs
   const validateForm = () => {
     const newErrors = {};
+    
+    if (!name.trim()) {
+      newErrors.name = 'Name is required';
+    } else if (name.trim().length < 2) {
+      newErrors.name = 'Name must be at least 2 characters';
+    }
     
     if (!email.trim()) {
       newErrors.email = 'Email is required';
@@ -29,39 +36,68 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Handle login form submission
-  const handleLogin = (e) => {
+  // Handle register form submission
+  const handleRegister = (e) => {
     e.preventDefault();
     
     if (validateForm()) {
-      // Simulate login (no backend call yet)
-      console.log('Login attempt:', { email, password });
-      onLogin();
+      // Simulate register (no backend call yet)
+      console.log('Register attempt:', { name, email, password });
+      onRegister();
     }
   };
 
   return (
-    <div style={loginStyles.container}>
-      {/* Login Card */}
-      <div style={loginStyles.card}>
-        <h1 style={loginStyles.title}>Sign In</h1>
-        <p style={loginStyles.subtitle}>
-          Enter your credentials to access the dashboard
+    <div style={registerStyles.container}>
+      {/* Register Card */}
+      <div style={registerStyles.card}>
+        <h1 style={registerStyles.title}>Create Account</h1>
+        <p style={registerStyles.subtitle}>
+          Sign up to get started with our platform
         </p>
 
-        {/* Login Form */}
-        <form onSubmit={handleLogin} style={loginStyles.form}>
+        {/* Register Form */}
+        <form onSubmit={handleRegister} style={registerStyles.form}>
+          {/* Name Field */}
+          <div style={registerStyles.formGroup}>
+            <label style={registerStyles.label} htmlFor="name">
+              Full Name
+            </label>
+            <input
+              id="name"
+              type="text"
+              style={{
+                ...registerStyles.input,
+                ...(errors.name && registerStyles.inputError),
+              }}
+              placeholder="John Doe"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = '#3b82f6';
+                e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = errors.name ? '#dc2626' : '#e2e8f0';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            />
+            {errors.name && (
+              <p style={registerStyles.errorText}>{errors.name}</p>
+            )}
+          </div>
+
           {/* Email Field */}
-          <div style={loginStyles.formGroup}>
-            <label style={loginStyles.label} htmlFor="email">
+          <div style={registerStyles.formGroup}>
+            <label style={registerStyles.label} htmlFor="email">
               Email Address
             </label>
             <input
               id="email"
               type="email"
               style={{
-                ...loginStyles.input,
-                ...(errors.email && loginStyles.inputError),
+                ...registerStyles.input,
+                ...(errors.email && registerStyles.inputError),
               }}
               placeholder="name@example.com"
               value={email}
@@ -76,21 +112,21 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
               }}
             />
             {errors.email && (
-              <p style={loginStyles.errorText}>{errors.email}</p>
+              <p style={registerStyles.errorText}>{errors.email}</p>
             )}
           </div>
 
           {/* Password Field */}
-          <div style={loginStyles.formGroup}>
-            <label style={loginStyles.label} htmlFor="password">
+          <div style={registerStyles.formGroup}>
+            <label style={registerStyles.label} htmlFor="password">
               Password
             </label>
             <input
               id="password"
               type="password"
               style={{
-                ...loginStyles.input,
-                ...(errors.password && loginStyles.inputError),
+                ...registerStyles.input,
+                ...(errors.password && registerStyles.inputError),
               }}
               placeholder="Enter your password"
               value={password}
@@ -105,14 +141,14 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
               }}
             />
             {errors.password && (
-              <p style={loginStyles.errorText}>{errors.password}</p>
+              <p style={registerStyles.errorText}>{errors.password}</p>
             )}
           </div>
 
-          {/* Login Button */}
+          {/* Register Button */}
           <button
             type="submit"
-            style={loginStyles.loginButton}
+            style={registerStyles.registerButton}
             onMouseEnter={(e) => {
               e.currentTarget.style.backgroundColor = '#2563eb';
               e.currentTarget.style.boxShadow = '0 8px 16px rgba(59, 130, 246, 0.3)';
@@ -124,32 +160,16 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
               e.currentTarget.style.transform = 'translateY(0)';
             }}
           >
-            Login
+            Register
           </button>
         </form>
 
-        {/* Back to Home Button */}
-        <button
-          style={loginStyles.secondaryButton}
-          onClick={onBackToHome}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#f1f5f9';
-            e.currentTarget.style.color = '#2563eb';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-            e.currentTarget.style.color = '#64748b';
-          }}
-        >
-          Back to Home
-        </button>
-
-        {/* Register Link */}
-        <div style={loginStyles.linkContainer}>
-          <span style={loginStyles.linkText}>Don't have an account? </span>
+        {/* Already have account link */}
+        <div style={registerStyles.linkContainer}>
+          <span style={registerStyles.linkText}>Already have an account? </span>
           <button
-            style={loginStyles.linkButton}
-            onClick={onGoToRegister}
+            style={registerStyles.linkButton}
+            onClick={onBackToLogin}
             onMouseEnter={(e) => {
               e.currentTarget.style.color = '#2563eb';
             }}
@@ -157,7 +177,7 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
               e.currentTarget.style.color = '#3b82f6';
             }}
           >
-            Register
+            Login
           </button>
         </div>
       </div>
@@ -165,8 +185,8 @@ function Login({ onLogin, onBackToHome, onGoToRegister }) {
   );
 }
 
-// Styles object for Login component
-const loginStyles = {
+// Styles object for Register component
+const registerStyles = {
   container: {
     minHeight: '100vh',
     background: 'linear-gradient(135deg, #f8fafc 0%, #f0f4f8 100%)',
@@ -236,7 +256,7 @@ const loginStyles = {
     margin: '6px 0 0 0',
     fontWeight: '500',
   },
-  loginButton: {
+  registerButton: {
     width: '100%',
     padding: '12px 16px',
     fontSize: '15px',
@@ -248,19 +268,6 @@ const loginStyles = {
     cursor: 'pointer',
     boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
     transition: 'all 0.3s ease',
-    marginBottom: '12px',
-  },
-  secondaryButton: {
-    width: '100%',
-    padding: '12px 16px',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#64748b',
-    backgroundColor: 'transparent',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
     marginBottom: '12px',
   },
   linkContainer: {
@@ -286,4 +293,4 @@ const loginStyles = {
   },
 };
 
-export default Login;
+export default Register;

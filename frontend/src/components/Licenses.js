@@ -176,10 +176,10 @@ function Licenses() {
                       <span 
                         style={{
                           ...pageStyles.statusBadge,
-                          ...getStatusStyle(license.status),
+                          ...getStatusStyle(license.status || 'active'),
                         }}
                       >
-                        {license.status.charAt(0).toUpperCase() + license.status.slice(1)}
+                        {license.status ? license.status.charAt(0).toUpperCase() + license.status.slice(1) : 'Active'}
                       </span>
                     </td>
                   </tr>

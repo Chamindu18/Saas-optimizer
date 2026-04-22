@@ -1,0 +1,161 @@
+/* ============================================================================
+   HEADER LAYOUT
+   ============================================================================ */
+
+.header {
+  height: 56px;
+  background: rgba(12, 11, 10, 0.92);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--spacing-lg);
+  margin-left: 220px;
+  gap: var(--spacing-lg);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Breadcrumb
+   ────────────────────────────────────────────────────────────────────── */
+.header-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+
+.breadcrumb-item {
+  color: var(--text-muted);
+  transition: color var(--ease-fast);
+}
+
+.breadcrumb-item.active {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.breadcrumb-separator {
+  color: var(--border-default);
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Search
+   ────────────────────────────────────────────────────────────────────── */
+.header-search {
+  flex: 1;
+  max-width: 400px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  transition: all var(--ease-fast);
+}
+
+.header-search.focused {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-gold);
+  background: var(--bg-surface);
+}
+
+.header-search svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: var(--font-sans);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.search-input:focus {
+  outline: none;
+}
+
+.search-shortcut {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: 3px;
+  padding: 2px 6px;
+  flex-shrink: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Right Section
+   ────────────────────────────────────────────────────────────────────── */
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  flex-shrink: 0;
+}
+
+.header-button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color var(--ease-fast);
+  position: relative;
+}
+
+.header-button:hover {
+  color: var(--text-primary);
+}
+
+.notification-button {
+  position: relative;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  background: var(--gold);
+  border-radius: 50%;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.header-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gold-glow-soft);
+  color: var(--gold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ease-fast);
+  border: 1px solid var(--border-default);
+}
+
+.header-avatar:hover {
+  border-color: var(--gold);
+  box-shadow: var(--shadow-gold);
+}

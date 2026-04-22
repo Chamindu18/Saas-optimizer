@@ -14,6 +14,7 @@
 
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
+import requireRole from '../middleware/requireRole.js';
 import softwareController from '../controllers/softwareController.js';
 
 const router = express.Router();
@@ -21,19 +22,19 @@ const router = express.Router();
 // Apply auth middleware to all routes in this router
 router.use(authMiddleware);
 
-// Get all software
+// Get all software - all authenticated roles can view
 router.get('/', softwareController.getSoftware);
 
-// Get software by ID
+// Get software by ID - all authenticated roles can view
 router.get('/:id', softwareController.getSoftwareById);
 
-// Create new software
-router.post('/', softwareController.createSoftware);
+// Create new software - admin and manager only
+router.post('/', requireRole('admin', 'manager'), softwareController.createSoftware);
 
-// Update software
-router.put('/:id', softwareController.updateSoftware);
+// Update software - admin and manager only
+router.put('/:id', requireRole('admin', 'manager'), softwareController.updateSoftware);
 
-// Delete software
-router.delete('/:id', softwareController.deleteSoftware);
+// Delete software - admin only
+router.delete('/:id', requireRole('admin'), softwareController.deleteSoftware);
 
 export default router;

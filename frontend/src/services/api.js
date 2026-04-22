@@ -28,19 +28,36 @@ api.interceptors.request.use(
 );
 
 /**
- * Response interceptor - handles token expiration
- * If 401 response, token is invalid/expired, redirect to login
+ * Response interceptor - handles API errors globally
+ * - 401: Token expired/invalid → redirect to login
+ * - 403: Forbidden (no permission) → show warning toast
+ * - Other errors: pass through to caller
  */
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
+    // 401: Unauthorized (token expired or missing)
     if (error.response?.status === 401) {
-      // Token expired or invalid, redirect to login
       localStorage.removeItem('seatwatch_token');
       window.location.href = '/login';
     }
+
+    // 403: Forbidden (user doesn't have permission)
+    if (error.response?.status === 403) {
+      const errorMsg = error.response?.data?.message || 
+                       'You do not have permission to perform this action';
+      
+      // Try to show a toast notification if a global toast function exists
+      if (window.showToast) {
+        window.showToast(errorMsg, 'warning');
+      } else {
+        // Fallback: log to console if no toast system is available
+        console.warn('Access denied:', errorMsg);
+      }
+    }
+
     return Promise.reject(error);
   }
 );

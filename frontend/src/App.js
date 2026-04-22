@@ -9,6 +9,7 @@ import Dashboard from './components/Dashboard';
 import Users from './components/Users';
 import Software from './components/Software';
 import Licenses from './components/Licenses';
+import RoleManagement from './components/RoleManagement';
 import Sidebar from './components/Sidebar';
 import Navbar from './components/Navbar';
 
@@ -75,6 +76,16 @@ function App() {
           }
         />
 
+        {/* Role Management page - admin only */}
+        <Route
+          path="/role-management"
+          element={
+            <PrivateRoute>
+              <DashboardLayout page="roles" />
+            </PrivateRoute>
+          }
+        />
+
         {/* Catch-all: redirect unknown routes to home */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -96,6 +107,7 @@ function DashboardLayout({ page }) {
       users: 'Users',
       software: 'Software',
       licenses: 'Licenses',
+      roles: 'Role Management',
     };
     return titles[page] || 'Dashboard';
   };
@@ -107,14 +119,15 @@ function DashboardLayout({ page }) {
 
       {/* Main content area */}
       <div style={appStyles.mainContent}>
-        {/* Top navbar with page title */}
-        <Navbar title={getPageTitle()} />
+        {/* Top navbar with page title - not shown for full-page components like RoleManagement */}
+        {page !== 'roles' && <Navbar title={getPageTitle()} />}
 
         {/* Conditionally render components based on page state */}
         {page === 'dashboard' && <Dashboard />}
         {page === 'users' && <Users />}
         {page === 'software' && <Software />}
         {page === 'licenses' && <Licenses />}
+        {page === 'roles' && <RoleManagement />}
       </div>
     </div>
   );

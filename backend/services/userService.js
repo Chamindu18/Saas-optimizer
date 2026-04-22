@@ -98,10 +98,49 @@ const deleteUser = async (userId) => {
   }
 };
 
+/**
+ * Count users with admin role
+ * Returns the number of admin users in the system
+ */
+const countAdmins = async () => {
+  try {
+    return await UserModel.countAdmins();
+  } catch (error) {
+    throw new Error(`Failed to count admins: ${error.message}`);
+  }
+};
+
+/**
+ * Update a user's role
+ * Changes a user's role to admin, manager, or viewer
+ */
+const updateUserRole = async (userId, newRole) => {
+  try {
+    if (!userId) {
+      throw new Error('User ID is required');
+    }
+
+    if (!['admin', 'manager', 'viewer'].includes(newRole)) {
+      throw new Error('Invalid role. Must be one of: admin, manager, viewer');
+    }
+
+    const user = await UserModel.getUserById(Number(userId));
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    return await UserModel.updateUserRole(Number(userId), newRole);
+  } catch (error) {
+    throw new Error(`Failed to update user role: ${error.message}`);
+  }
+};
+
 export default {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  countAdmins,
+  updateUserRole,
 };

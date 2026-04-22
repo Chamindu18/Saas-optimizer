@@ -156,10 +156,86 @@ const deleteUser = async (req, res) => {
   }
 };
 
+/**
+ * PATCH /api/users/:id/role
+ * Update a user's role (admin only)
+ * 
+ * Prevents:
+ * - Users from changing their own role
+ * - Demoting the last admin account
+ * 
+ * Request body:
+ * {
+ *   "role": "manager"  // 'admin', 'manager', or 'viewer'
+ * }
+ */
+const updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+    const currentUserId = req.user.id;
+
+    // Validate role is one of the allowed values
+    if (!['admin', 'manager', 'viewer'].includes(role)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid role',
+        message: 'Role must be one of: admin, manager, viewer'
+      });
+    }
+
+    // Prevent user from changing their own role
+    if (parseInt(id) === currentUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot change your own role',
+        message: 'Ask another admin to change your role'
+      });
+    }
+
+    // Prevent demoting the last admin
+    if (role !== 'admin') {
+      // Count current admins in the system
+      const adminCountResult = await userService.countAdmins();
+      const adminCount = adminCountResult;
+
+      // If only 1 admin exists and we're demoting that admin, block it
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          error: 'Cannot demote the last admin',
+          message: 'There must always be at least one admin account'
+        });
+      }
+    }
+
+    // Update the role
+    const updatedUser = await userService.updateUserRole(id, role);
+
+    res.json({
+      success: true,
+      message: `User role updated to ${role}`,
+      data: updatedUser,
+    });
+  } catch (error) {
+    if (error.message.includes('not found')) {
+      return res.status(404).json({
+        success: false,
+        error: error.message,
+      });
+    }
+    res.status(400).json({
+      success: false,
+      error: error.message,
+    });
+  }
+};
+
 export default {
   getUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  updateUserRole,
 };

@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import RoleGuard from './RoleGuard';
+import { useRole } from '../hooks/useRole';
 
 // Software page component - displays list of software in a table
 function Software() {
@@ -14,6 +16,9 @@ function Software() {
 
   // State for card hover effect
   const [isCardHovered, setIsCardHovered] = useState(false);
+
+  // Get user's role for permission checks
+  const { can } = useRole();
 
   // useEffect runs once when component mounts (empty dependency array)
   // This is where we fetch software data from the backend API
@@ -81,6 +86,7 @@ function Software() {
                   <th style={pageStyles.tableHeader}>Name</th>
                   <th style={pageStyles.tableHeader}>Category</th>
                   <th style={pageStyles.tableHeader}>Price per Seat</th>
+                  <th style={pageStyles.tableHeader}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,6 +103,32 @@ function Software() {
                     <td style={pageStyles.tableCell}>
                       {/* Format price as currency with $ sign */}
                       ${parseFloat(item.price_per_seat).toFixed(2)}
+                    </td>
+
+                    {/* Action buttons - Edit and Delete */}
+                    <td style={pageStyles.tableCell}>
+                      <div style={pageStyles.actionButtonGroup}>
+                        {/* Delete button - admin only */}
+                        <RoleGuard action="deleteSoftware" fallback="disabled">
+                          <button
+                            style={{...pageStyles.actionButton, ...pageStyles.actionButtonDanger}}
+                            onClick={() => {
+                              if (window.confirm(`Delete ${item.name}?`)) {
+                                api.delete(`/software/${item.id}`)
+                                  .then(() => {
+                                    setSoftware(software.filter(s => s.id !== item.id));
+                                  })
+                                  .catch(err => {
+                                    setError(`Failed to delete software: ${err.message}`);
+                                  });
+                              }
+                            }}
+                            title="Permanently delete this software"
+                          >
+                            Delete
+                          </button>
+                        </RoleGuard>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -194,6 +226,26 @@ const pageStyles = {
     marginTop: '20px',
     fontSize: '12px',
     color: '#94a3b8',
+  },
+  actionButtonGroup: {
+    display: 'flex',
+    gap: '8px',
+  },
+  actionButton: {
+    padding: '6px 12px',
+    borderRadius: '4px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#f8fafc',
+    color: '#475569',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  actionButtonDanger: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    borderColor: '#fecaca',
   },
 };
 

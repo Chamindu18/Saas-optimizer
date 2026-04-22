@@ -33,8 +33,9 @@ const authMiddleware = (req, res, next) => {
     // Verify token with secret key
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-env');
 
-    // Attach user ID to request object for use in controllers
-    req.user = { id: decoded.userId };
+    // Attach user data to request object for use in controllers
+    // Includes userId, email, and role for permission checks
+    req.user = { id: decoded.userId, email: decoded.email, role: decoded.role };
 
     // Continue to next middleware/route handler
     next();

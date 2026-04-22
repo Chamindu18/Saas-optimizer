@@ -49,6 +49,8 @@ function Login() {
 
       if (response.data.success) {
         setToken(response.data.token);
+        // Store user ID for identifying current user in UI (e.g., Role Management page)
+        localStorage.setItem('seatwatch_user_id', response.data.user.id);
         navigate('/dashboard');
       }
     } catch (error) {

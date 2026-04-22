@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import api from '../services/api';
+import RoleGuard from './RoleGuard';
+import { useRole } from '../hooks/useRole';
 
 // Licenses page component - displays list of licenses with user and software details
 function Licenses() {
@@ -20,6 +22,9 @@ function Licenses() {
 
   // State for card hover effect
   const [isCardHovered, setIsCardHovered] = useState(false);
+
+  // Get user's role for permission checks
+  const { can } = useRole();
 
   // useEffect runs once when component mounts (empty dependency array)
   // This is where we fetch licenses, users, and software from the backend API
@@ -145,6 +150,7 @@ function Licenses() {
                   <th style={pageStyles.tableHeader}>Software Name</th>
                   <th style={pageStyles.tableHeader}>Last Active Date</th>
                   <th style={pageStyles.tableHeader}>Status</th>
+                  <th style={pageStyles.tableHeader}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -181,6 +187,53 @@ function Licenses() {
                       >
                         {license.status ? license.status.charAt(0).toUpperCase() + license.status.slice(1) : 'Active'}
                       </span>
+                    </td>
+
+                    {/* Action buttons - Prune and Delete */}
+                    <td style={pageStyles.tableCell}>
+                      <div style={pageStyles.actionButtonGroup}>
+                        {/* Prune button - admin only, shown as disabled for non-admins */}
+                        <RoleGuard action="pruneLicense" fallback="disabled">
+                          <button
+                            style={pageStyles.actionButton}
+                            onClick={() => {
+                              if (window.confirm(`Prune license for ${getUserName(license.user_id)}?`)) {
+                                api.post(`/licenses/${license.id}/prune`)
+                                  .then(() => {
+                                    setLicenses(licenses.filter(l => l.id !== license.id));
+                                  })
+                                  .catch(err => {
+                                    setError(`Failed to prune license: ${err.message}`);
+                                  });
+                              }
+                            }}
+                            title="Disable this license seat"
+                          >
+                            Prune
+                          </button>
+                        </RoleGuard>
+
+                        {/* Delete button - admin only */}
+                        <RoleGuard action="deleteLicense">
+                          <button
+                            style={{...pageStyles.actionButton, ...pageStyles.actionButtonDanger}}
+                            onClick={() => {
+                              if (window.confirm(`Delete license for ${getUserName(license.user_id)}?`)) {
+                                api.delete(`/licenses/${license.id}`)
+                                  .then(() => {
+                                    setLicenses(licenses.filter(l => l.id !== license.id));
+                                  })
+                                  .catch(err => {
+                                    setError(`Failed to delete license: ${err.message}`);
+                                  });
+                              }
+                            }}
+                            title="Permanently delete this license"
+                          >
+                            Delete
+                          </button>
+                        </RoleGuard>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -285,6 +338,26 @@ const pageStyles = {
     marginTop: '20px',
     fontSize: '12px',
     color: '#94a3b8',
+  },
+  actionButtonGroup: {
+    display: 'flex',
+    gap: '8px',
+  },
+  actionButton: {
+    padding: '6px 12px',
+    borderRadius: '4px',
+    border: '1px solid #e2e8f0',
+    backgroundColor: '#f8fafc',
+    color: '#475569',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  },
+  actionButtonDanger: {
+    backgroundColor: '#fee2e2',
+    color: '#dc2626',
+    borderColor: '#fecaca',
   },
 };
 

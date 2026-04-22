@@ -124,10 +124,44 @@ const deleteUser = async (id) => {
   }
 };
 
+/**
+ * Count users with admin role
+ * Returns: Number of admin users in the system
+ */
+const countAdmins = async () => {
+  try {
+    const result = await pool.query("SELECT COUNT(*) FROM users WHERE role = 'admin'");
+    return parseInt(result.rows[0].count, 10);
+  } catch (error) {
+    console.error('Database error in countAdmins:', error.message);
+    throw error;
+  }
+};
+
+/**
+ * Update a user's role
+ * Args: id - User ID, newRole - New role ('admin', 'manager', or 'viewer')
+ * Returns: The updated user object
+ */
+const updateUserRole = async (id, newRole) => {
+  try {
+    const result = await pool.query(
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING *',
+      [newRole, id]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Database error in updateUserRole:', error.message);
+    throw error;
+  }
+};
+
 export default {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
+  countAdmins,
+  updateUserRole,
 };

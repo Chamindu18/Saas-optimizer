@@ -64,10 +64,11 @@ const register = async (req, res) => {
     // salt rounds: 10 (balance between security and performance)
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Insert new user into database
+    // Insert new user into database with default role 'viewer'
+    // Never allow role to be passed in request body for security
     const result = await pool.query(
-      'INSERT INTO users (name, email, password) VALUES ($1, $2, $3) RETURNING id, name, email',
-      [name, email, hashedPassword]
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      [name, email, hashedPassword, 'viewer']
     );
 
     const newUser = result.rows[0];
@@ -121,9 +122,9 @@ const login = async (req, res) => {
       });
     }
 
-    // Find user by email
+    // Find user by email and fetch role
     const result = await pool.query(
-      'SELECT id, name, email, password FROM users WHERE email = $1',
+      'SELECT id, name, email, password, role FROM users WHERE email = $1',
       [email]
     );
 
@@ -148,9 +149,9 @@ const login = async (req, res) => {
       });
     }
 
-    // Generate JWT token
+    // Generate JWT token with role included for frontend permission checks
     const token = jwt.sign(
-      { userId: user.id, email: user.email },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'your-secret-key-change-in-env',
       { expiresIn: '7d' } // Token valid for 7 days
     );

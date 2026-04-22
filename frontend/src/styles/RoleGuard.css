@@ -1,0 +1,34 @@
+/* RoleGuard Disabled State Styling */
+
+.role-guard-disabled {
+  display: inline-block;
+  position: relative;
+  cursor: not-allowed;
+}
+
+.role-guard-disabled-content {
+  opacity: 0.35;
+  pointer-events: none;
+  user-select: none;
+}
+
+.role-guard-disabled:hover {
+  /* Tooltip is shown via the title attribute on the container */
+}
+
+/* Style for buttons inside disabled RoleGuard */
+.role-guard-disabled button,
+.role-guard-disabled input,
+.role-guard-disabled select {
+  cursor: not-allowed !important;
+  background-color: #f5f5f5 !important;
+  border-color: #ddd !important;
+  color: #999 !important;
+}
+
+.role-guard-disabled button:hover,
+.role-guard-disabled input:hover,
+.role-guard-disabled select:hover {
+  background-color: #f5f5f5 !important;
+  cursor: not-allowed !important;
+}

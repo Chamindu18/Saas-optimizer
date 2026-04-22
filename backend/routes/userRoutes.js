@@ -14,6 +14,7 @@
 
 import express from 'express';
 import authMiddleware from '../middleware/auth.js';
+import requireRole from '../middleware/requireRole.js';
 import userController from '../controllers/userController.js';
 
 const router = express.Router();
@@ -21,8 +22,8 @@ const router = express.Router();
 // Apply auth middleware to all routes in this router
 router.use(authMiddleware);
 
-// Get all users
-router.get('/', userController.getUsers);
+// Get all users - admin only (for role management)
+router.get('/', requireRole('admin'), userController.getUsers);
 
 // Get user by ID
 router.get('/:id', userController.getUserById);
@@ -35,5 +36,8 @@ router.put('/:id', userController.updateUser);
 
 // Delete user
 router.delete('/:id', userController.deleteUser);
+
+// Update a user's role - admin only
+router.patch('/:id/role', requireRole('admin'), userController.updateUserRole);
 
 export default router;

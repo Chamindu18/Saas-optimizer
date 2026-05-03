@@ -63,10 +63,9 @@ export default function RegisterPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          fullName: form.fullName,
+          name: form.fullName,
           email: form.email,
           password: form.password,
-          role: form.role,
         }),
       });
 
@@ -75,17 +74,13 @@ export default function RegisterPage() {
         throw new Error(error.message || 'Registration failed');
       }
 
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
       addToast('Account created successfully!', {
         type: 'success',
         title: 'Welcome',
         duration: 2000,
       });
 
-      navigate('/dashboard');
+      navigate('/login', { state: { message: 'Please sign in with your new account.' } });
     } catch (err) {
       addToast(err.message, {
         type: 'error',
@@ -165,27 +160,19 @@ export default function RegisterPage() {
                 disabled={loading}
                 showPasswordToggle
               />
-              <div className="strength-bar">
-                {[0, 1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    className={`strength-segment ${
-                      i < passwordStrength
-                        ? passwordStrength === 1
-                          ? 'weak'
-                          : passwordStrength === 2
-                          ? 'fair'
-                          : passwordStrength === 3
-                          ? 'good'
-                          : 'strong'
-                        : ''
-                    }`}
-                  />
-                ))}
-              </div>
-              <div className="password-strength-label">
-                {form.password ? `Strength: ${strengthLabels[passwordStrength]}` : ''}
-              </div>
+              {form.password && (
+                <div className="password-strength-container">
+                  <div className="password-strength-bar">
+                    <div 
+                      className={`password-strength-fill strength-${passwordStrength}`}
+                      style={{ width: `${(passwordStrength + 1) * 20}%` }}
+                    ></div>
+                  </div>
+                  <div className={`password-strength-label strength-${passwordStrength}`}>
+                    Strength: {strengthLabels[passwordStrength]}
+                  </div>
+                </div>
+              )}
             </div>
 
             <Input

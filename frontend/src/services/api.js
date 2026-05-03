@@ -40,7 +40,8 @@ api.interceptors.response.use(
   (error) => {
     // 401: Unauthorized (token expired or missing)
     if (error.response?.status === 401) {
-      localStorage.removeItem('seatwatch_token');
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('user');
       window.location.href = '/login';
     }
 

@@ -21,15 +21,15 @@
 }
 
 .page-header-title {
-  font-size: 32px;
-  font-weight: 500;
+  font-size: 34px;
+  font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 var(--spacing-sm) 0;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.8px;
 }
 
 .page-header-subtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--text-secondary);
   margin: 0;
   line-height: 1.6;

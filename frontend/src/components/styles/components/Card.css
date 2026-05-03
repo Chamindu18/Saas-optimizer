@@ -1,0 +1,38 @@
+/* ============================================================================
+   CARD COMPONENT STYLES
+   ============================================================================ */
+
+.card {
+  background-color: var(--color-surface);
+  border-radius: var(--radius-xl);
+  transition: all var(--transition-base);
+}
+
+.card-padded {
+  padding: var(--space-6);
+}
+
+.card-bordered {
+  border: 1px solid var(--color-border);
+}
+
+.card-shadow-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.card-shadow-md {
+  box-shadow: var(--shadow-md);
+}
+
+.card-shadow-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+.card-shadow-none {
+  box-shadow: none;
+}
+
+.card-hover:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-border-dark);
+}

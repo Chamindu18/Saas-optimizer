@@ -6,6 +6,7 @@
  */
 
 import licenseService from '../services/licenseService.js';
+import logAction from '../utils/auditLogger.js';
 
 /**
  * GET /api/licenses
@@ -135,6 +136,21 @@ const deleteLicense = async (req, res) => {
 
     const deletedLicense = await licenseService.deleteLicense(id);
 
+    // Log the action
+    if (req.user) {
+      await logAction({
+        userId: req.user.id,
+        userName: req.user.email,
+        userRole: req.user.role,
+        action: 'DELETE_LICENSE',
+        targetType: 'license',
+        targetId: parseInt(id),
+        targetName: deletedLicense?.name || `License ${id}`,
+        details: 'License permanently deleted',
+        ipAddress: req.ip,
+      });
+    }
+
     res.json({
       success: true,
       message: 'License deleted successfully',
@@ -164,6 +180,21 @@ const pruneLicense = async (req, res) => {
     const { id } = req.params;
 
     const prunedLicense = await licenseService.pruneLicense(id);
+
+    // Log the action
+    if (req.user) {
+      await logAction({
+        userId: req.user.id,
+        userName: req.user.email,
+        userRole: req.user.role,
+        action: 'PRUNE_LICENSE',
+        targetType: 'license',
+        targetId: parseInt(id),
+        targetName: prunedLicense?.name || `License ${id}`,
+        details: `License pruned — status changed to ${prunedLicense?.status}`,
+        ipAddress: req.ip,
+      });
+    }
 
     res.json({
       success: true,

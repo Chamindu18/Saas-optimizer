@@ -1,18 +1,46 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
+import { isLoggedIn } from '../utils/auth';
 import '../pages/styles/HomePage.css';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalSoftware: 0,
+    totalLicenses: 0,
+  });
+  const [statsError, setStatsError] = useState(null);
 
   useEffect(() => {
     // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    if (token) {
+    if (isLoggedIn()) {
       navigate('/dashboard');
     }
   }, [navigate]);
+
+  useEffect(() => {
+    const fetchHomeStats = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/stats/home');
+        if (!response.ok) {
+          throw new Error('Failed to load stats');
+        }
+        const payload = await response.json();
+        setStats({
+          totalUsers: payload.data?.totalUsers || 0,
+          totalSoftware: payload.data?.totalSoftware || 0,
+          totalLicenses: payload.data?.totalLicenses || 0,
+        });
+        setStatsError(null);
+      } catch (error) {
+        setStatsError(error.message);
+      }
+    };
+
+    fetchHomeStats();
+  }, []);
 
   return (
     <>
@@ -44,65 +72,67 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="hero">
-        <div className="hero-badge" data-reveal="">
-          ⚡ Built for operations teams
-        </div>
-
-        <h1 className="hero-title reveal">
-          <span className="hero-line-1">Stop paying for</span>
-          <span className="hero-line-2">software nobody uses</span>
-        </h1>
-
-        <p className="hero-subtitle reveal reveal-delay-1">
-          SeatWatch detects idle licenses, tracks spend, and tells you exactly where your budget is
-          being wasted.
-        </p>
-
-        <div className="hero-cta reveal reveal-delay-2">
-          <Button
-            variant="primary"
-            size="lg"
-            onClick={() => navigate('/register')}
-          >
-            Start for free
-          </Button>
-          <button className="cta-link">
-            See the dashboard →
-          </button>
-        </div>
-
-        <div className="hero-social reveal reveal-delay-3">
-          <p>Trusted by 200+ operations teams</p>
-          <div className="social-avatars">
-            <div className="avatar">A</div>
-            <div className="avatar">B</div>
-            <div className="avatar">C</div>
-            <div className="avatar">D</div>
-          </div>
-        </div>
-
-        {/* Dashboard Preview Card */}
-        <div className="hero-preview reveal reveal-delay-4">
-          <div className="preview-card">
-            <div className="preview-header">
-              <div className="preview-dot"></div>
-              <div className="preview-dot"></div>
-              <div className="preview-dot"></div>
+        <div className="hero-grid">
+          <div className="hero-copy">
+            <div className="hero-badge" data-reveal="">
+              Built for operations teams
             </div>
-            <div className="preview-content">
-              <div className="preview-metric">
-                <div className="preview-label">Monthly Spend</div>
-                <div className="preview-value">$47,200</div>
+
+            <h1 className="hero-title reveal">
+              <span className="hero-line-1">Stop paying for</span>
+              <span className="hero-line-2">software nobody uses</span>
+            </h1>
+
+            <p className="hero-subtitle reveal reveal-delay-1">
+              SeatWatch detects idle licenses, tracks spend, and tells you exactly where your budget is
+              being wasted.
+            </p>
+
+            <div className="hero-cta reveal reveal-delay-2">
+              <Button
+                variant="primary"
+                size="lg"
+                onClick={() => navigate('/register')}
+              >
+                Start for free
+              </Button>
+              <button className="cta-link">
+                See the dashboard →
+              </button>
+            </div>
+
+            <div className="hero-social reveal reveal-delay-3">
+              <p>Live platform stats</p>
+              <div className="social-avatars">
+                <div className="avatar">U</div>
+                <div className="avatar">S</div>
+                <div className="avatar">L</div>
               </div>
-              <div className="preview-metric">
-                <div className="preview-label">Potential Savings</div>
-                <div className="preview-value" style={{ color: 'var(--danger-text)' }}>
-                  $9,850
+            </div>
+          </div>
+
+          <div className="hero-visual reveal reveal-delay-4">
+            <div className="preview-card">
+              <div className="preview-header">
+                <div className="preview-dot"></div>
+                <div className="preview-dot"></div>
+                <div className="preview-dot"></div>
+              </div>
+              <div className="preview-content">
+                <div className="preview-metric">
+                  <div className="preview-label">Total Users</div>
+                  <div className="preview-value">{stats.totalUsers.toLocaleString()}</div>
+                </div>
+                <div className="preview-metric">
+                  <div className="preview-label">Total Licenses</div>
+                  <div className="preview-value" style={{ color: 'var(--danger-text)' }}>
+                    {stats.totalLicenses.toLocaleString()}
+                  </div>
                 </div>
               </div>
             </div>
+            <div className="preview-glow"></div>
           </div>
-          <div className="preview-glow"></div>
         </div>
 
         {/* Scroll Indicator */}
@@ -114,25 +144,31 @@ export default function HomePage() {
       {/* Stats Bar */}
       <section className="stats-bar">
         <div className="stat">
-          <div className="stat-value">$2.4M</div>
-          <div className="stat-label">Saved by users</div>
+          <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
+          <div className="stat-label">Total users</div>
         </div>
         <div className="stat-divider"></div>
         <div className="stat">
-          <div className="stat-value">18,000+</div>
-          <div className="stat-label">Idle licenses detected</div>
+          <div className="stat-value">{stats.totalSoftware.toLocaleString()}</div>
+          <div className="stat-label">Software tools tracked</div>
         </div>
         <div className="stat-divider"></div>
         <div className="stat">
-          <div className="stat-value">340+</div>
-          <div className="stat-label">Companies</div>
+          <div className="stat-value">{stats.totalLicenses.toLocaleString()}</div>
+          <div className="stat-label">Active licenses recorded</div>
         </div>
         <div className="stat-divider"></div>
         <div className="stat">
-          <div className="stat-value">&lt; 5 min</div>
-          <div className="stat-label">To set up</div>
+          <div className="stat-value">Live</div>
+          <div className="stat-label">Stats from your database</div>
         </div>
       </section>
+
+      {statsError && (
+        <div className="stats-error" style={{ textAlign: 'center', color: 'var(--danger-text)', marginTop: '12px' }}>
+          {statsError}
+        </div>
+      )}
 
       {/* Features Section */}
       <section className="features-section">

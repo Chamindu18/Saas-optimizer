@@ -1,0 +1,135 @@
+/* ============================================================================
+   DESIGN TOKENS — CENTRALIZED DESIGN SYSTEM
+   ============================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  /* ========== COLOR PALETTE ========== */
+  --color-bg: #0a0a0f;
+  --color-surface: #13131a;
+  --color-surface-raised: #1c1c27;
+  --color-border: rgba(255, 255, 255, 0.07);
+  --color-border-accent: rgba(108, 99, 255, 0.3);
+  
+  --color-primary: #6c63ff;
+  --color-primary-glow: rgba(108, 99, 255, 0.25);
+  --color-primary-dark: #5a52e0;
+  
+  --color-accent: #00e5cc;
+  --color-accent-glow: rgba(0, 229, 204, 0.12);
+  
+  --color-text: #f0eff8;
+  --color-text-muted: #7b7a8e;
+  --color-text-disabled: #5a5968;
+  
+  --color-danger: #ff5c6a;
+  --color-danger-bg: rgba(255, 92, 106, 0.15);
+  
+  --color-success: #00c896;
+  --color-success-bg: rgba(0, 200, 150, 0.15);
+  
+  --color-warning: #ffb347;
+  --color-warning-bg: rgba(255, 179, 71, 0.15);
+
+  /* ========== TYPOGRAPHY ========== */
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Font sizes */
+  --text-hero: 72px;
+  --text-h1: 48px;
+  --text-h2: 36px;
+  --text-h3: 28px;
+  --text-h4: 24px;
+  --text-h5: 20px;
+  --text-body-lg: 18px;
+  --text-body: 16px;
+  --text-body-sm: 14px;
+  --text-label: 12px;
+  --text-caption: 11px;
+
+  /* Font weights */
+  --font-thin: 300;
+  --font-regular: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  --font-extrabold: 800;
+
+  /* ========== SPACING SCALE (4px base) ========== */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+  --space-32: 128px;
+
+  /* ========== BORDER RADIUS ========== */
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 32px;
+  --radius-full: 9999px;
+
+  /* ========== SHADOWS ========== */
+  --shadow-glow: 0 0 40px rgba(108, 99, 255, 0.15);
+  --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --shadow-elevated: 0 8px 48px rgba(0, 0, 0, 0.6);
+  --shadow-hover: 0 12px 64px rgba(0, 0, 0, 0.7);
+
+  /* ========== TRANSITIONS ========== */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 150ms;
+  --duration-base: 300ms;
+  --duration-slow: 600ms;
+
+  /* ========== COMPONENT SIZES ========== */
+  --input-height: 44px;
+  --button-height: 48px;
+  --button-height-sm: 40px;
+  --sidebar-width: 240px;
+  --topbar-height: 64px;
+  --mobile-sidebar-width: 60px;
+
+  /* ========== Z-INDEX SCALE ========== */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-toast: 600;
+  --z-tooltip: 700;
+}
+
+/* Light mode override (if needed later) */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Can define light mode colors here if needed */
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -23,6 +23,8 @@ import userRoutes from './routes/userRoutes.js';
 import softwareRoutes from './routes/softwareRoutes.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
+import statsRoutes from './routes/statsRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -98,6 +100,12 @@ app.use('/api/licenses', licenseRoutes);
 
 // Dashboard routes: /api/dashboard
 app.use('/api/dashboard', dashboardRoutes);
+
+// Stats routes: /api/stats (public)
+app.use('/api/stats', statsRoutes);
+
+// Admin routes: /api/admin (admin only)
+app.use('/api/admin', adminRoutes);
 
 // ============================================
 // ERROR HANDLING

@@ -13,11 +13,15 @@ import express from 'express';
 import authMiddleware from '../middleware/auth.js';
 import requireRole from '../middleware/requireRole.js';
 import dashboardController from '../controllers/dashboardController.js';
+import dashboardStatsController from '../controllers/dashboardStatsController.js';
 
 const router = express.Router();
 
 // Apply auth middleware to all routes in this router
 router.use(authMiddleware);
+
+// Get dashboard stats (real metrics)
+router.get('/stats', dashboardStatsController.getDashboardStats);
 
 // Get complete dashboard data (metrics, calculations, idle users) - all authenticated roles can view
 router.get('/', dashboardController.getDashboardData);

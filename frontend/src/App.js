@@ -1,27 +1,32 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ToastProvider } from './components/ui/ToastContainer';
-import { initScrollReveal } from './utils/scrollReveal';
+
+// Import design system (new)
+import './styles/design-system.css';
+import './App.css';
 
 // Pages
-import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import AdminDashboardPage from './pages/AdminDashboardPage';
+import RoleManagementPage from './pages/RoleManagementPage';
+import AuditLogPage from './pages/AuditLogPage';
 
 // Layout
 import Sidebar from './components/layout/Sidebar';
 import Header from './components/layout/Header';
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute';
 
 // Protected Layout Wrapper
-function DashboardLayout({ children, title, subtitle, actions }) {
+function DashboardLayout({ children }) {
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div className="dashboard-layout">
       <Sidebar />
-      <div style={{ flex: 1, marginLeft: '220px' }}>
-        <Header title={title} subtitle={subtitle} />
-        <main style={{ padding: '24px', paddingTop: '80px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+      <div className="dashboard-content">
+        <Header />
+        <main className="dashboard-main">
           {children}
         </main>
       </div>
@@ -30,34 +35,67 @@ function DashboardLayout({ children, title, subtitle, actions }) {
 }
 
 function App() {
-  useEffect(() => {
-    // Initialize scroll reveal animations
-    initScrollReveal();
-  }, []);
-
   return (
     <ToastProvider>
       <Router>
         <Routes>
           {/* ====== PUBLIC ROUTES ====== */}
-          <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
 
           {/* ====== PROTECTED ROUTES ====== */}
           <Route
             path="/dashboard"
             element={
               <PrivateRoute>
-                <DashboardLayout title="Dashboard" subtitle="Overview of your SaaS spend and licenses">
+                <DashboardLayout>
                   <DashboardPage />
                 </DashboardLayout>
               </PrivateRoute>
             }
           />
 
-          {/* Catch-all redirect */}
-          <Route path="*" element={<Navigate to="/" replace />} />
+          {/* ====== ADMIN ROUTES ====== */}
+          <Route
+            path="/admin"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <DashboardLayout>
+                    <AdminDashboardPage />
+                  </DashboardLayout>
+                </AdminRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/role-management"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <DashboardLayout>
+                    <RoleManagementPage />
+                  </DashboardLayout>
+                </AdminRoute>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/audit-log"
+            element={
+              <PrivateRoute>
+                <AdminRoute>
+                  <DashboardLayout>
+                    <AuditLogPage />
+                  </DashboardLayout>
+                </AdminRoute>
+              </PrivateRoute>
+            }
+          />
+
+          {/* Catch-all redirect to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </ToastProvider>

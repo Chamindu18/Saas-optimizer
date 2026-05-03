@@ -1,0 +1,102 @@
+/* ============================================================================
+   ALERT COMPONENT STYLES
+   ============================================================================ */
+
+.alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-6);
+  border-radius: var(--radius-lg);
+  border: 1px solid;
+  border-left-width: 4px;
+}
+
+.alert-content {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  flex: 1;
+}
+
+.alert-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 16px;
+}
+
+.alert-body {
+  text-align: left;
+}
+
+.alert-title {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  margin: 0 0 var(--space-1) 0;
+}
+
+.alert-message {
+  font-size: var(--text-sm);
+  margin: 0;
+  opacity: 0.9;
+}
+
+.alert-action {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.alert-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: opacity var(--transition-base);
+  padding: 0;
+  margin-left: var(--space-2);
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+/* Info variant */
+.alert-info {
+  background-color: var(--color-info-light);
+  border-color: var(--color-info);
+  color: var(--color-info);
+}
+
+/* Success variant */
+.alert-success {
+  background-color: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+/* Warning variant */
+.alert-warning {
+  background-color: var(--color-warning-light);
+  border-color: var(--color-warning);
+  color: var(--color-warning);
+}
+
+/* Danger/Error variant */
+.alert-danger,
+.alert-error {
+  background-color: var(--color-danger-light);
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}

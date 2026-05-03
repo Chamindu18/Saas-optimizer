@@ -1,0 +1,38 @@
+/* ============================================================================
+   SKELETON LOADING COMPONENT STYLES
+   ============================================================================ */
+
+.skeleton {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+.skeleton-line {
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  height: 16px;
+}
+
+.skeleton-card {
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.skeleton-text {
+  background-color: var(--color-bg-tertiary);
+  border-radius: var(--radius-md);
+  height: 16px;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}

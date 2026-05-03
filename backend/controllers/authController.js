@@ -30,7 +30,9 @@ import pool from '../config/db.js';
  */
 const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    // Accept 'fullName' from frontend, map to 'name' in DB
+    const { name: fullName, email, password } = req.body;
+    const name = fullName || '';  // Fallback if sent as 'name' from old code
 
     // Validation
     if (!name || !email || !password) {
@@ -165,6 +167,7 @@ const login = async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
       },
     });
   } catch (error) {

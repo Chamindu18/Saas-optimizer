@@ -3,9 +3,9 @@
    ============================================================================ */
 
 .header {
-  height: 56px;
-  background: rgba(12, 11, 10, 0.92);
-  backdrop-filter: blur(16px);
+  height: 60px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(18px) saturate(140%);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
   top: 0;
@@ -13,7 +13,6 @@
   display: flex;
   align-items: center;
   padding: 0 var(--spacing-lg);
-  margin-left: 220px;
   gap: var(--spacing-lg);
 }
 
@@ -47,7 +46,7 @@
    ────────────────────────────────────────────────────────────────────── */
 .header-search {
   flex: 1;
-  max-width: 400px;
+  max-width: 460px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -89,10 +88,10 @@
 .search-shortcut {
   color: var(--text-muted);
   font-size: 11px;
-  font-weight: 500;
+  font-weight: 600;
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
-  border-radius: 3px;
+  border-radius: 6px;
   padding: 2px 6px;
   flex-shrink: 0;
 }
@@ -140,8 +139,8 @@
 }
 
 .header-avatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
   background: var(--gold-glow-soft);
   color: var(--gold);

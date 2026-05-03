@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRole } from '../../hooks/useRole';
+import { logout } from '../../utils/auth';
 import '../styles/Sidebar.css';
 
 // SVG Icons (inline for simplicity)
@@ -39,10 +40,23 @@ const IconUsers = () => (
   </svg>
 );
 
-const IconSettings = () => (
+const IconShield = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="12" cy="12" r="3"></circle>
-    <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.98 2.98l4.24 4.24M1 12h6m6 0h6m-19.78 7.78l4.24-4.24m2.98-2.98l4.24-4.24"></path>
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+  </svg>
+);
+
+const IconLock = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+    <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+  </svg>
+);
+
+const IconClock = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="12" cy="12" r="10"></circle>
+    <polyline points="12 6 12 12 16 14"></polyline>
   </svg>
 );
 
@@ -57,14 +71,13 @@ const IconLogout = () => (
 export default function Sidebar() {
   const navigate = useNavigate();
   const { role } = useRole();
-  const [isVisible, setIsVisible] = useState(true);
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  // Get user from token
+  const token = localStorage.getItem('seatwatch_token');
+  const user = token ? JSON.parse(atob(token.split('.')[1])) : { email: 'User' };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/login');
+    logout();
   };
 
   const navItems = [
@@ -74,38 +87,65 @@ export default function Sidebar() {
       icon: <IconDashboard />,
       path: '/dashboard',
       roles: ['admin', 'manager', 'viewer'],
+      section: 'MAIN'
     },
     {
       id: 'licenses',
       label: 'Licenses',
       icon: <IconLicense />,
       path: '/licenses',
-      roles: ['admin', 'manager'],
+      roles: ['admin', 'manager', 'viewer'],
+      section: 'MAIN'
     },
     {
       id: 'software',
       label: 'Software',
       icon: <IconSoftware />,
       path: '/software',
-      roles: ['admin', 'manager'],
+      roles: ['admin', 'manager', 'viewer'],
+      section: 'MAIN'
     },
     {
       id: 'users',
       label: 'Users',
       icon: <IconUsers />,
       path: '/users',
+      roles: ['admin', 'manager', 'viewer'],
+      section: 'MAIN'
+    },
+    // ADMIN section
+    {
+      id: 'admin-panel',
+      label: 'Admin Panel',
+      icon: <IconShield />,
+      path: '/admin',
       roles: ['admin'],
+      section: 'ADMIN'
     },
     {
-      id: 'settings',
-      label: 'Settings',
-      icon: <IconSettings />,
-      path: '/settings',
+      id: 'role-management',
+      label: 'Role Management',
+      icon: <IconLock />,
+      path: '/role-management',
       roles: ['admin'],
+      section: 'ADMIN'
+    },
+    {
+      id: 'audit-log',
+      label: 'Audit Log',
+      icon: <IconClock />,
+      path: '/audit-log',
+      roles: ['admin'],
+      section: 'ADMIN'
     },
   ];
 
+  // Filter by role
   const visibleItems = navItems.filter(item => item.roles.includes(role));
+
+  // Group by section
+  const mainItems = visibleItems.filter(item => item.section === 'MAIN');
+  const adminItems = visibleItems.filter(item => item.section === 'ADMIN');
 
   return (
     <div className="sidebar">
@@ -120,25 +160,10 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="sidebar-nav">
         {/* Main Section */}
-        <div className="nav-section">
-          <div className="nav-section-label">Main</div>
-          {visibleItems.slice(0, 1).map(item => (
-            <button
-              key={item.id}
-              className="nav-item"
-              onClick={() => navigate(item.path)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* Intelligence Section */}
-        {visibleItems.slice(1, 3).length > 0 && (
+        {mainItems.length > 0 && (
           <div className="nav-section">
-            <div className="nav-section-label">Intelligence</div>
-            {visibleItems.slice(1, 3).map(item => (
+            <div className="nav-section-label">Main</div>
+            {mainItems.map(item => (
               <button
                 key={item.id}
                 className="nav-item"
@@ -152,13 +177,16 @@ export default function Sidebar() {
         )}
 
         {/* Admin Section */}
-        {visibleItems.slice(3).length > 0 && (
+        {adminItems.length > 0 && (
           <div className="nav-section">
-            <div className="nav-section-label">Admin</div>
-            {visibleItems.slice(3).map(item => (
+            <div className="nav-section-label admin-label">
+              <span>Admin</span>
+              <span className="admin-badge">★</span>
+            </div>
+            {adminItems.map(item => (
               <button
                 key={item.id}
-                className="nav-item"
+                className="nav-item admin-item"
                 onClick={() => navigate(item.path)}
               >
                 <span className="nav-icon">{item.icon}</span>
@@ -170,17 +198,17 @@ export default function Sidebar() {
       </nav>
 
       {/* User Section */}
-      <div className="sidebar-user">
+      <div className="sidebar-user-card">
         <div className="user-avatar">
-          {user.fullName
-            ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+          {user.email
+            ? user.email.split('@')[0].substring(0, 2).toUpperCase()
             : 'U'}
         </div>
         <div className="user-info">
-          <div className="user-name">{user.fullName || 'User'}</div>
-          <div className="user-role">{role}</div>
+          <div className="user-name">{user.email || 'User'}</div>
+          <span className={`role-badge role-badge--${role}`}>{role}</span>
         </div>
-        <button className="user-logout" onClick={handleLogout} title="Logout">
+        <button className="user-logout" onClick={handleLogout} title="Sign out">
           <IconLogout />
         </button>
       </div>

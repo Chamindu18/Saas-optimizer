@@ -95,8 +95,8 @@ export default function LoginPage() {
           <div className="login-logo">
             <div className="logo-icon">📊</div>
             <div className="logo-text">
-              <h1 className="logo-title">SaaS Optimizer</h1>
-              <p className="logo-subtitle">Enterprise License Management</p>
+              <h1 className="logo-title">SeatWatch</h1>
+              <p className="logo-subtitle">License management MVP</p>
             </div>
           </div>
         </div>
@@ -174,7 +174,7 @@ export default function LoginPage() {
             </li>
             <li>
               <span className="info-icon">✓</span>
-              <span>Detect idle licenses automatically</span>
+              <span>Flag idle licenses from recorded activity dates</span>
             </li>
             <li>
               <span className="info-icon">✓</span>
@@ -182,7 +182,7 @@ export default function LoginPage() {
             </li>
             <li>
               <span className="info-icon">✓</span>
-              <span>Prune unused subscriptions</span>
+              <span>Mark license assignments as pruned</span>
             </li>
           </ul>
         </div>

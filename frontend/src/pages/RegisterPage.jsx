@@ -102,7 +102,7 @@ export default function RegisterPage() {
         <div className="auth-form-container">
           <div className="auth-form-header">
             <h1 className="auth-form-title">Create account</h1>
-            <p className="auth-form-subtitle">Join your team and start optimizing</p>
+            <p className="auth-form-subtitle">Create a read-only viewer account</p>
           </div>
 
           <form onSubmit={handleRegister} className="auth-form">

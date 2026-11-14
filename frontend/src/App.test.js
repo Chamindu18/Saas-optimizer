@@ -56,3 +56,12 @@ test('viewer navigation hides admin controls and cannot open admin route', async
   expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
   expect(window.location.pathname).toBe('/dashboard');
 });
+
+test('public landing page describes the current manual MVP without a purchase flow', async () => {
+  window.history.pushState({}, '', '/home');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: /Keep a clear record of software seats and spend/ })).toBeInTheDocument();
+  expect(screen.getByText(/Activity dates are entered manually/)).toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Create viewer account' }).length).toBeGreaterThan(0);
+  expect(screen.queryByText(/Free Trial|\$299|500\+ integrations|AI Analysis/i)).not.toBeInTheDocument();
+});

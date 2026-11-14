@@ -51,7 +51,9 @@ export const remove = async (req, res) => {
     }
     return res.status(404).json({ success: false, error: 'Employee not found' });
   } catch (error) {
-    if (error.code === '23503') return res.status(409).json({ success: false, error: 'Employee has licenses' });
+    if (error.code === '23503' || error.code === '23001') {
+      return res.status(409).json({ success: false, error: 'Employee has licenses' });
+    }
     return respondError(res, error);
   }
 };

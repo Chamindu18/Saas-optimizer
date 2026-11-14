@@ -17,6 +17,7 @@ let accounts;
 let employees;
 let licenses;
 let statements;
+let restrictRace;
 
 const publicEmployee = (employee) => employee &&
   ({ id: employee.id, name: employee.name, email: employee.email, created_at: employee.created_at });
@@ -48,6 +49,7 @@ const query = async (sql, params = []) => {
     return { rows: [publicEmployee(employee)] };
   }
   if (statement.startsWith('DELETE FROM employees')) {
+    if (restrictRace) throw Object.assign(new Error('restricted by license'), { code: '23001' });
     const id = Number(params[0]);
     if (licenses.some((license) => license.employee_id === id)) return { rows: [] };
     const employee = employees.get(id);
@@ -94,6 +96,7 @@ beforeEach(() => {
     [1, { id: 1, name: 'Existing', email: 'existing@test.invalid', account_id: 3, created_at: '2026-01-01' }],
   ]);
   licenses = [];
+  restrictRace = false;
 });
 
 const request = async (method, path, actor, body) => {
@@ -147,6 +150,13 @@ test('license assignment targets employees, and assigned employees cannot be del
   assert.equal((await request('POST', '/api/licenses', 2, { employee_id: 999, software_id: 5 })).status, 404);
   assert.equal((await request('DELETE', '/api/employees/1', 1)).status, 409);
   assert.equal(licenses.length, 1);
+});
+
+test('concurrent license restriction is returned as a conflict', async () => {
+  restrictRace = true;
+  const result = await request('DELETE', '/api/employees/1', 1);
+  assert.equal(result.status, 409);
+  assert.equal(employees.has(1), true);
 });
 
 test('manager may delete an unassigned employee without affecting accounts', async () => {

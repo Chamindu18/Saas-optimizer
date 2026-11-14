@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRole } from '../../hooks/useRole';
-import { logout } from '../../utils/auth';
+import { getUser, logout } from '../../utils/auth';
 import '../styles/Sidebar.css';
 
 // SVG Icons (inline for simplicity)
@@ -72,9 +72,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { role } = useRole();
 
-  // Get user from token
-  const token = localStorage.getItem('seatwatch_token');
-  const user = token ? JSON.parse(atob(token.split('.')[1])) : { email: 'User' };
+  const user = getUser() || { email: 'User' };
 
   const handleLogout = () => {
     logout();

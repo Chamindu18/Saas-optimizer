@@ -77,7 +77,7 @@ export const setUser = (user) => {
     console.error('Error saving user:', error);
   }
 };
-    console.error('Error decoding token:', error);
-    return null;
-  }
+
+export const clearAuth = () => {
+  logout();
 };

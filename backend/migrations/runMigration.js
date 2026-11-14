@@ -17,49 +17,50 @@ const runMigration = async () => {
   try {
     console.log('🚀 Starting database migration...\n');
 
-    // Read the SQL file
-    const sqlFilePath = path.join(__dirname, '001-admin-setup.sql');
-    const sql = fs.readFileSync(sqlFilePath, 'utf8');
-
-    // Parse SQL statements, removing comments and empty lines
-    const lines = sql.split('\n');
-    let currentStatement = '';
-    const statements = [];
-
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      // Skip empty lines and comment-only lines
-      if (!trimmedLine || trimmedLine.startsWith('--')) {
-        continue;
-      }
-
-      // Add line to current statement
-      currentStatement += ' ' + trimmedLine;
-
-      // If line ends with semicolon, we have a complete statement
-      if (trimmedLine.endsWith(';')) {
-        statements.push(currentStatement.trim());
-        currentStatement = '';
-      }
-    }
+    const migrationFiles = fs
+      .readdirSync(__dirname)
+      .filter((file) => file.endsWith('.sql'))
+      .sort();
 
     let count = 0;
-    for (const statement of statements) {
-      if (statement.length > 10) { // Skip very short statements
-        try {
-          await pool.query(statement);
-          count++;
-          console.log(`✅ Statement ${count} executed successfully`);
-        } catch (err) {
-          // Some statements might fail if they already exist (e.g., ADD COLUMN IF NOT EXISTS)
-          // This is expected and not an error
-          if (err.code === '42701' || err.code === '42P07' || err.message.includes('already exists')) {
-            console.log(`⚠️  Statement ${count} skipped (already exists)`);
-          } else {
-            console.error(`❌ Statement ${count} failed:`, err.message);
-            console.error(`   SQL: ${statement.substring(0, 100)}...`);
-            throw err;
+    for (const migrationFile of migrationFiles) {
+      console.log(`\n📄 Applying ${migrationFile}...`);
+      const sqlFilePath = path.join(__dirname, migrationFile);
+      const sql = fs.readFileSync(sqlFilePath, 'utf8');
+
+      const lines = sql.split('\n');
+      let currentStatement = '';
+      const statements = [];
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+
+        if (!trimmedLine || trimmedLine.startsWith('--')) {
+          continue;
+        }
+
+        currentStatement += ' ' + trimmedLine;
+
+        if (trimmedLine.endsWith(';')) {
+          statements.push(currentStatement.trim());
+          currentStatement = '';
+        }
+      }
+
+      for (const statement of statements) {
+        if (statement.length > 10) {
+          try {
+            await pool.query(statement);
+            count++;
+            console.log(`✅ Statement ${count} executed successfully`);
+          } catch (err) {
+            if (err.code === '42701' || err.code === '42P07' || err.message.includes('already exists')) {
+              console.log(`⚠️  Statement ${count} skipped (already exists)`);
+            } else {
+              console.error(`❌ Statement ${count} failed:`, err.message);
+              console.error(`   SQL: ${statement.substring(0, 100)}...`);
+              throw err;
+            }
           }
         }
       }

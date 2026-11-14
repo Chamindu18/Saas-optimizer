@@ -37,7 +37,21 @@ const checkIfIdle = (lastActiveDate) => {
  */
 const getAllLicenses = async () => {
   try {
-    const result = await pool.query('SELECT * FROM licenses ORDER BY id ASC');
+    const result = await pool.query(`
+      SELECT
+        licenses.*,
+        users.name AS "userName",
+        users.email AS "userEmail",
+        software.name AS "softwareName",
+        software.category AS "softwareCategory",
+        software.price_per_seat AS cost,
+        licenses.assigned_date AS "assignedDate",
+        licenses.last_active_date AS "lastActivityDate"
+      FROM licenses
+      JOIN users ON licenses.user_id = users.id
+      JOIN software ON licenses.software_id = software.id
+      ORDER BY licenses.id ASC
+    `);
     return result.rows;
   } catch (error) {
     console.error('Database error in getAllLicenses:', error.message);
@@ -52,7 +66,22 @@ const getAllLicenses = async () => {
  */
 const getLicenseById = async (id) => {
   try {
-    const result = await pool.query('SELECT * FROM licenses WHERE id = $1', [id]);
+    const result = await pool.query(
+      `SELECT
+        licenses.*,
+        users.name AS "userName",
+        users.email AS "userEmail",
+        software.name AS "softwareName",
+        software.category AS "softwareCategory",
+        software.price_per_seat AS cost,
+        licenses.assigned_date AS "assignedDate",
+        licenses.last_active_date AS "lastActivityDate"
+      FROM licenses
+      JOIN users ON licenses.user_id = users.id
+      JOIN software ON licenses.software_id = software.id
+      WHERE licenses.id = $1`,
+      [id]
+    );
     return result.rows[0] || null;
   } catch (error) {
     console.error('Database error in getLicenseById:', error.message);
@@ -67,7 +96,23 @@ const getLicenseById = async (id) => {
  */
 const getLicensesByUserId = async (userId) => {
   try {
-    const result = await pool.query('SELECT * FROM licenses WHERE user_id = $1 ORDER BY id ASC', [userId]);
+    const result = await pool.query(
+      `SELECT
+        licenses.*,
+        users.name AS "userName",
+        users.email AS "userEmail",
+        software.name AS "softwareName",
+        software.category AS "softwareCategory",
+        software.price_per_seat AS cost,
+        licenses.assigned_date AS "assignedDate",
+        licenses.last_active_date AS "lastActivityDate"
+      FROM licenses
+      JOIN users ON licenses.user_id = users.id
+      JOIN software ON licenses.software_id = software.id
+      WHERE licenses.user_id = $1
+      ORDER BY licenses.id ASC`,
+      [userId]
+    );
     return result.rows;
   } catch (error) {
     console.error('Database error in getLicensesByUserId:', error.message);
@@ -82,7 +127,23 @@ const getLicensesByUserId = async (userId) => {
  */
 const getLicensesBySoftwareId = async (softwareId) => {
   try {
-    const result = await pool.query('SELECT * FROM licenses WHERE software_id = $1 ORDER BY id ASC', [softwareId]);
+    const result = await pool.query(
+      `SELECT
+        licenses.*,
+        users.name AS "userName",
+        users.email AS "userEmail",
+        software.name AS "softwareName",
+        software.category AS "softwareCategory",
+        software.price_per_seat AS cost,
+        licenses.assigned_date AS "assignedDate",
+        licenses.last_active_date AS "lastActivityDate"
+      FROM licenses
+      JOIN users ON licenses.user_id = users.id
+      JOIN software ON licenses.software_id = software.id
+      WHERE licenses.software_id = $1
+      ORDER BY licenses.id ASC`,
+      [softwareId]
+    );
     return result.rows;
   } catch (error) {
     console.error('Database error in getLicensesBySoftwareId:', error.message);
@@ -97,10 +158,13 @@ const getLicensesBySoftwareId = async (softwareId) => {
  */
 const createLicense = async (licenseData) => {
   try {
-    const { user_id, software_id, assigned_date, last_active_date, status } = licenseData;
+    const { user_id, software_id } = licenseData;
+    const assignedDate = licenseData.assigned_date || new Date();
+    const lastActiveDate = licenseData.last_active_date || assignedDate;
+    const status = licenseData.status || 'active';
     const result = await pool.query(
       'INSERT INTO licenses (user_id, software_id, assigned_date, last_active_date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [user_id, software_id, assigned_date, last_active_date, status]
+      [user_id, software_id, assignedDate, lastActiveDate, status]
     );
     return result.rows[0];
   } catch (error) {
@@ -116,10 +180,28 @@ const createLicense = async (licenseData) => {
  */
 const updateLicense = async (id, licenseData) => {
   try {
-    const { user_id, software_id, assigned_date, last_active_date, status } = licenseData;
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+
+    for (const [key, value] of Object.entries(licenseData)) {
+      if (key !== 'id' && key !== 'created_at' && key !== 'updated_at' && value !== undefined) {
+        fields.push(`${key} = $${paramCount}`);
+        values.push(value);
+        paramCount++;
+      }
+    }
+
+    if (fields.length === 0) {
+      return null;
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
     const result = await pool.query(
-      'UPDATE licenses SET user_id=$1, software_id=$2, assigned_date=$3, last_active_date=$4, status=$5 WHERE id=$6 RETURNING *',
-      [user_id, software_id, assigned_date, last_active_date, status, id]
+      `UPDATE licenses SET ${fields.join(', ')} WHERE id=$${paramCount} RETURNING *`,
+      values
     );
     return result.rows[0] || null;
   } catch (error) {

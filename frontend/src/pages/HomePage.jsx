@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../components/ui/Button';
-import { isLoggedIn } from '../utils/auth';
+import { statsAPI } from '../services/api';
 import '../pages/styles/HomePage.css';
 
 export default function HomePage() {
@@ -13,25 +13,16 @@ export default function HomePage() {
   });
   const [statsError, setStatsError] = useState(null);
 
-  useEffect(() => {
-    // Check if user is already logged in
-    if (isLoggedIn()) {
-      navigate('/dashboard');
-    }
-  }, [navigate]);
+
 
   useEffect(() => {
     const fetchHomeStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/stats/home');
-        if (!response.ok) {
-          throw new Error('Failed to load stats');
-        }
-        const payload = await response.json();
+        const payload = await statsAPI.getHomeStats();
         setStats({
-          totalUsers: payload.data?.totalUsers || 0,
-          totalSoftware: payload.data?.totalSoftware || 0,
-          totalLicenses: payload.data?.totalLicenses || 0,
+          totalUsers: payload.totalUsers || 0,
+          totalSoftware: payload.totalSoftware || 0,
+          totalLicenses: payload.totalLicenses || 0,
         });
         setStatsError(null);
       } catch (error) {
@@ -96,7 +87,7 @@ export default function HomePage() {
               >
                 Start for free
               </Button>
-              <button className="cta-link">
+              <button className="cta-link" onClick={() => navigate('/dashboard')}>
                 See the dashboard →
               </button>
             </div>
@@ -171,7 +162,7 @@ export default function HomePage() {
       )}
 
       {/* Features Section */}
-      <section className="features-section">
+      <section className="features-section" id="features">
         <div className="section-label">WHAT IT DOES</div>
         <h2 className="section-title">Everything you need to cut SaaS waste</h2>
 
@@ -187,7 +178,7 @@ export default function HomePage() {
             </div>
             <h3 className="feature-title">Ghost Account Detection</h3>
             <p className="feature-desc">Automatically flags licenses unused for 30+ days. No manual auditing.</p>
-            <a href="#" className="feature-link">Learn more →</a>
+            <a href="/register" className="feature-link">Learn more →</a>
           </div>
 
           {/* Feature 2 */}
@@ -200,7 +191,7 @@ export default function HomePage() {
             </div>
             <h3 className="feature-title">Real-time Spend Tracking</h3>
             <p className="feature-desc">See exactly what each department costs. Broken down by tool and team.</p>
-            <a href="#" className="feature-link">Learn more →</a>
+            <a href="/register" className="feature-link">Learn more →</a>
           </div>
 
           {/* Feature 3 */}
@@ -214,13 +205,13 @@ export default function HomePage() {
             </div>
             <h3 className="feature-title">One-click License Pruning</h3>
             <p className="feature-desc">Release idle seats instantly. Savings counter updates in real time.</p>
-            <a href="#" className="feature-link">Learn more →</a>
+            <a href="/register" className="feature-link">Learn more →</a>
           </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="how-it-works">
+      <section className="how-it-works" id="about">
         <div className="section-label">PROCESS</div>
         <h2 className="section-title">How it works</h2>
 
@@ -313,7 +304,7 @@ export default function HomePage() {
       </section>
 
       {/* CTA Banner */}
-      <section className="cta-banner">
+      <section className="cta-banner" id="contact">
         <div className="cta-content">
           <h2>Ready to eliminate SaaS waste?</h2>
           <p>Start tracking and optimizing your software spend today. Free for 14 days.</p>
@@ -324,7 +315,7 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="footer">
+      <footer className="footer" id="privacy">
         <div className="footer-content">
           <div className="footer-section">
             <div className="footer-logo">
@@ -339,7 +330,7 @@ export default function HomePage() {
             <ul>
               <li><a href="#features">Features</a></li>
               <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#docs">Docs</a></li>
+              <li><a href="#features">Docs</a></li>
             </ul>
           </div>
 
@@ -347,7 +338,7 @@ export default function HomePage() {
             <h4>Company</h4>
             <ul>
               <li><a href="#about">About</a></li>
-              <li><a href="#blog">Blog</a></li>
+              <li><a href="#about">Blog</a></li>
               <li><a href="#contact">Contact</a></li>
             </ul>
           </div>
@@ -361,12 +352,12 @@ export default function HomePage() {
           </div>
         </div>
 
-        <div className="footer-bottom">
+        <div className="footer-bottom" id="terms">
           <p>&copy; 2024 SeatWatch. All rights reserved.</p>
           <div className="footer-social">
-            <a href="#">Twitter</a>
-            <a href="#">LinkedIn</a>
-            <a href="#">GitHub</a>
+            <a href="https://twitter.com">Twitter</a>
+            <a href="https://www.linkedin.com">LinkedIn</a>
+            <a href="https://github.com">GitHub</a>
           </div>
         </div>
       </footer>

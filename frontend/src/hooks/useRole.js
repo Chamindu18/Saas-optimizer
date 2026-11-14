@@ -1,5 +1,12 @@
 import { getToken } from '../utils/auth';
 
+const decodeTokenPayload = (token) => {
+  const base64Url = token.split('.')[1] || '';
+  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+  return JSON.parse(atob(padded));
+};
+
 /**
  * useRole Hook
  * 
@@ -30,7 +37,7 @@ export const useRole = () => {
   try {
     // JWT format: header.payload.signature
     // Payload is base64url encoded JSON in the middle
-    const payload = JSON.parse(atob(token.split('.')[1]));
+    const payload = decodeTokenPayload(token);
     const role = payload.role || 'viewer';
 
     return {

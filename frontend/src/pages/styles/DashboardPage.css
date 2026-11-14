@@ -177,6 +177,11 @@ time {
     padding: var(--space-2) var(--space-3);
   }
 }
+
+.bento-panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
   left: 0;
   right: 0;
   height: 2px;

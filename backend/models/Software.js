@@ -68,10 +68,28 @@ const createSoftware = async (softwareData) => {
  */
 const updateSoftware = async (id, softwareData) => {
   try {
-    const { name, category, price_per_seat } = softwareData;
+    const fields = [];
+    const values = [];
+    let paramCount = 1;
+
+    for (const [key, value] of Object.entries(softwareData)) {
+      if (key !== 'id' && key !== 'created_at' && key !== 'updated_at' && value !== undefined) {
+        fields.push(`${key} = $${paramCount}`);
+        values.push(value);
+        paramCount++;
+      }
+    }
+
+    if (fields.length === 0) {
+      return null;
+    }
+
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
     const result = await pool.query(
-      'UPDATE software SET name=$1, category=$2, price_per_seat=$3 WHERE id=$4 RETURNING *',
-      [name, category, price_per_seat, id]
+      `UPDATE software SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+      values
     );
     return result.rows[0] || null;
   } catch (error) {

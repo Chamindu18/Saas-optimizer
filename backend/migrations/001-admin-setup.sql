@@ -9,6 +9,11 @@
 ALTER TABLE users
   ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'viewer';
 
+-- Step 1a: Add updated_at column to licenses table for tracking modifications
+-- ============================================
+ALTER TABLE licenses
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
+
 -- Step 2: Set admin user role
 -- ============================================
 UPDATE users SET role = 'admin'

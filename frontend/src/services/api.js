@@ -1,10 +1,12 @@
 import axios from 'axios';
-import { getToken } from '../utils/auth';
+import { clearAuth, getToken } from '../utils/auth';
+
+const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 // Create an axios instance with the backend API base URL
 // This is convenient so we don't have to repeat the full URL in every API call
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -40,8 +42,7 @@ api.interceptors.response.use(
   (error) => {
     // 401: Unauthorized (token expired or missing)
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('user');
+      clearAuth();
       window.location.href = '/login';
     }
 
@@ -62,6 +63,73 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+const unwrap = (response) => response.data?.data ?? response.data;
+
+// Auth API
+export const authAPI = {
+  login: async (email, password) => unwrap(await api.post('/auth/login', { email, password })),
+  register: async (name, email, password) => unwrap(await api.post('/auth/register', { name, email, password })),
+};
+
+// Admin API
+export const adminAPI = {
+  getAllUsers: async () => unwrap(await api.get('/admin/users')),
+  getAllLicenses: async () => unwrap(await api.get('/licenses')),
+  getAuditLogs: async ({ page = 1, limit = 20, action } = {}) => {
+    const params = { page, limit };
+    if (action) {
+      params.action = action;
+    }
+    return unwrap(await api.get('/admin/audit-logs', { params }));
+  },
+  getSystemHealth: async () => unwrap(await api.get('/admin/system-health')),
+  getStats: async () => unwrap(await api.get('/admin/stats')),
+  updateUserRole: async (userId, role) => unwrap(await api.patch(`/admin/users/${userId}/role`, { role })),
+  deleteUser: async (userId) => unwrap(await api.delete(`/admin/users/${userId}`)),
+};
+
+export const statsAPI = {
+  getHomeStats: async () => unwrap(await api.get('/stats/home')),
+};
+
+// License API
+export const licenseAPI = {
+  getAllLicenses: async () => unwrap(await api.get('/licenses')),
+  getLicenses: async () => unwrap(await api.get('/licenses')),
+  createLicense: async (userId, softwareId) => unwrap(await api.post('/licenses', { user_id: userId, software_id: softwareId })),
+  assignLicense: async (userId, softwareId) => unwrap(await api.post('/licenses', { user_id: userId, software_id: softwareId })),
+  updateLicense: async (id, data) => unwrap(await api.put(`/licenses/${id}`, data)),
+  deleteLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
+  revokeLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
+  pruneLicense: async (id) => unwrap(await api.post(`/licenses/${id}/prune`)),
+};
+
+// Software API
+export const softwareAPI = {
+  getAllSoftware: async () => unwrap(await api.get('/software')),
+  getSoftware: async () => unwrap(await api.get('/software')),
+  createSoftware: async (name, category, price_per_seat) => unwrap(await api.post('/software', { name, category, price_per_seat })),
+  updateSoftware: async (id, data) => unwrap(await api.put(`/software/${id}`, data)),
+  deleteSoftware: async (id) => unwrap(await api.delete(`/software/${id}`)),
+};
+
+// User API
+export const userAPI = {
+  getAllUsers: async () => unwrap(await api.get('/users')),
+  getUsers: async () => unwrap(await api.get('/users')),
+  getProfile: async () => unwrap(await api.get('/users/profile')),
+  updateProfile: async (data) => unwrap(await api.put('/users/profile', data)),
+  createUser: async (name, email) => unwrap(await api.post('/users', { name, email })),
+  updateUser: async (id, data) => unwrap(await api.put(`/users/${id}`, data)),
+  deleteUser: async (id) => unwrap(await api.delete(`/users/${id}`)),
+};
+
+export const dashboardAPI = {
+  getStats: async () => unwrap(await api.get('/dashboard/stats')),
+  getDashboard: async () => unwrap(await api.get('/dashboard')),
+  getSummary: async () => unwrap(await api.get('/dashboard/summary')),
+};
 
 // Export the api instance so other components can use it
 export default api;

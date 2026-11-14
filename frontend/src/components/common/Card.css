@@ -1,0 +1,47 @@
+/**
+ * Card Styles
+ */
+
+.card {
+  background-color: var(--color-neutral-0);
+  border-radius: var(--border-radius-lg);
+  border: var(--border-width) solid var(--border-light);
+  transition: all var(--duration-base) var(--ease-in-out);
+}
+
+.card--p-sm {
+  padding: var(--space-3);
+}
+
+.card--p-md {
+  padding: var(--space-4);
+}
+
+.card--p-lg {
+  padding: var(--space-6);
+}
+
+.card--elevated {
+  box-shadow: var(--shadow-md);
+}
+
+.card--hoverable:hover {
+  box-shadow: var(--shadow-lg);
+  border-color: var(--color-primary-100);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 640px) {
+  .card {
+    border-radius: var(--border-radius-md);
+  }
+
+  .card--p-lg,
+  .card--p-md {
+    padding: var(--space-3);
+  }
+
+  .card--p-sm {
+    padding: var(--space-2);
+  }
+}

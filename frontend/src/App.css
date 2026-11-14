@@ -21,6 +21,8 @@
   overflow-x: hidden;
   padding: var(--space-8);
 }
+
+button {
   cursor: pointer;
   transition: all var(--transition-fast);
   border: none;

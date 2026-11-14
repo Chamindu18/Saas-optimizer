@@ -4,7 +4,8 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Alert from '../components/ui/Alert';
 import { useToast } from '../components/ui/ToastContainer';
-import api from '../services/api';
+import { authAPI } from '../services/api';
+import { setToken, setUser } from '../utils/auth';
 import '../pages/styles/LoginPage.css';
 
 const DEMO_CREDENTIALS = {
@@ -69,16 +70,11 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', {
-        email: formData.email,
-        password: formData.password,
-      });
-
-      const { token, user } = response.data;
+      const { token, user } = await authAPI.login(formData.email, formData.password);
 
       // Store auth data
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      setToken(token);
+      setUser(user);
 
       addToast('Welcome back!', {
         type: 'success',
@@ -89,7 +85,7 @@ export default function LoginPage() {
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     } catch (err) {
-      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      const message = err.response?.data?.message || err.response?.data?.error || err.message || 'Login failed. Please try again.';
       setApiError(message);
       addToast(message, {
         type: 'error',
@@ -106,12 +102,10 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const response = await api.post('/auth/login', DEMO_CREDENTIALS);
+      const { token, user } = await authAPI.login(DEMO_CREDENTIALS.email, DEMO_CREDENTIALS.password);
 
-      const { token, user } = response.data;
-
-      localStorage.setItem('auth_token', token);
-      localStorage.setItem('user', JSON.stringify(user));
+      setToken(token);
+      setUser(user);
 
       addToast('Demo login successful!', {
         type: 'success',
@@ -120,7 +114,7 @@ export default function LoginPage() {
 
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const message = err.response?.data?.message || 'Demo login failed. Please try again.';
+      const message = err.response?.data?.message || err.response?.data?.error || err.message || 'Demo login failed. Please try again.';
       setApiError(message);
       addToast(message, { type: 'error' });
     } finally {

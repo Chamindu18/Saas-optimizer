@@ -7,6 +7,16 @@
  */
 
 import jwt from 'jsonwebtoken';
+import pool from '../config/db.js';
+
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+
+  return secret;
+};
 
 /**
  * Middleware to protect routes that require authentication
@@ -14,38 +24,36 @@ import jwt from 'jsonwebtoken';
  * 
  * Expected header: Authorization: Bearer <token>
  */
-const authMiddleware = (req, res, next) => {
+const authMiddleware = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'Missing or invalid Authorization header' });
+  }
+
+  let decoded;
   try {
-    // Get Authorization header
-    const authHeader = req.headers.authorization;
-
-    // Check if header exists and follows "Bearer <token>" format
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        error: 'Missing or invalid Authorization header',
-      });
-    }
-
-    // Extract token from "Bearer <token>"
-    const token = authHeader.slice(7); // Remove "Bearer " prefix
-
-    // Verify token with secret key
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key-change-in-env');
-
-    // Attach user data to request object for use in controllers
-    // Includes userId, email, and role for permission checks
-    req.user = { id: decoded.userId, email: decoded.email, role: decoded.role };
-
-    // Continue to next middleware/route handler
-    next();
+    decoded = jwt.verify(authHeader.slice(7), getJwtSecret(), { algorithms: ['HS256'] });
   } catch (error) {
-    // Token is invalid, expired, or couldn't be verified
-    return res.status(401).json({
-      success: false,
-      error: 'Invalid or expired token',
-      details: error.message,
-    });
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is not configured');
+      return res.status(500).json({ success: false, error: 'Authentication unavailable' });
+    }
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  }
+
+  if (!Number.isSafeInteger(Number(decoded.userId)) || Number(decoded.userId) < 1) {
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  }
+  try {
+    const result = await pool.query('SELECT id, email, role FROM users WHERE id = $1', [decoded.userId]);
+    if (!result.rows[0]) {
+      return res.status(401).json({ success: false, error: 'Account no longer exists' });
+    }
+    req.user = result.rows[0];
+    return next();
+  } catch (error) {
+    console.error('Authentication lookup failed:', error.message);
+    return res.status(500).json({ success: false, error: 'Authentication unavailable' });
   }
 };
 

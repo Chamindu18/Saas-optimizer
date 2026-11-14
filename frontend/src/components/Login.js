@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import { setToken } from '../utils/auth';
+import { authAPI } from '../services/api';
+import { setToken, setUser } from '../utils/auth';
 
 function Login() {
   const navigate = useNavigate();
@@ -42,19 +42,15 @@ function Login() {
     setApiError('');
 
     try {
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      });
+      const response = await authAPI.login(email, password);
 
-      if (response.data.success) {
-        setToken(response.data.token);
-        // Store user ID for identifying current user in UI (e.g., Role Management page)
-        localStorage.setItem('seatwatch_user_id', response.data.user.id);
+      if (response.token) {
+        setToken(response.token);
+        setUser(response.user);
         navigate('/dashboard');
       }
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Login failed. Please try again.';
+      const errorMessage = error.response?.data?.error || error.message || 'Login failed. Please try again.';
       setApiError(errorMessage);
     } finally {
       setIsLoading(false);

@@ -5,6 +5,7 @@ export default function Button({
   children,
   variant = 'primary',
   size = 'md',
+  block = false,
   disabled = false,
   loading = false,
   type = 'button',
@@ -17,7 +18,7 @@ export default function Button({
       type={type}
       disabled={disabled || loading}
       onClick={onClick}
-      className={`btn btn-${variant} btn-${size} ${className}`}
+      className={`btn btn-${variant} btn-${size} ${block ? 'btn-block' : ''} ${className}`.trim()}
       {...props}
     >
       {loading ? (

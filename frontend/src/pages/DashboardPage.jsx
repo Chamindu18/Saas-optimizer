@@ -209,25 +209,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-                  <div className="stat-number">{data.metrics.activeUsers}</div>
-                  <div className="stat-label">with assignments</div>
-                </div>
-              </Card>
-            </div>
-
-            {/* Secondary: Quick Stats */}
-            <div className="bento-cell">
-              <Card className="bento-panel bento-panel-accent">
-                <div className="panel-header">Tools</div>
-                <div className="stat-box">
-                  <div className="stat-number">{data.metrics.totalSoftware}</div>
-                  <div className="stat-label">under management</div>
-                </div>
-              </Card>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}

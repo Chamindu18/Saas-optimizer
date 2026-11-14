@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getUser } from '../../utils/auth';
 import '../styles/Header.css';
 
 const IconSearch = () => (
@@ -18,7 +19,7 @@ const IconBell = () => (
 export default function Header({ title = 'Dashboard', subtitle = '' }) {
   const [searchFocus, setSearchFocus] = useState(false);
 
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = getUser() || {};
 
   return (
     <header className="header">
@@ -54,8 +55,8 @@ export default function Header({ title = 'Dashboard', subtitle = '' }) {
         </button>
 
         <div className="header-avatar">
-          {user.fullName
-            ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+          {user.name
+            ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase()
             : 'U'}
         </div>
       </div>

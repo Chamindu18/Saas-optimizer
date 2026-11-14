@@ -24,4 +24,4 @@ const dbConfig = {
 
 console.log('Database config loaded (connection not yet established)');
 
-module.exports = dbConfig;
+export default dbConfig;

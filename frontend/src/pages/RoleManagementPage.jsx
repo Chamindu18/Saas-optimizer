@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { adminAPI } from '../services/api';
 import Card from '../components/ui/Card';
+import { getUser } from '../utils/auth';
 import '../pages/styles/RoleManagementPage.css';
 
 /**
@@ -26,22 +27,17 @@ const RoleManagementPage = () => {
     fetchUsers();
     
     // Get current user ID from token
-    const token = localStorage.getItem('seatwatch_token');
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setCurrentUserId(payload.userId || payload.id);
-      } catch (e) {
-        console.error('Failed to decode token:', e);
-      }
+    const currentUser = getUser();
+    if (currentUser) {
+      setCurrentUserId(currentUser.id || null);
     }
   }, []);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/admin/users');
-      setUsers(response.data);
+      const usersResponse = await adminAPI.getAllUsers();
+      setUsers(usersResponse || []);
       setError(null);
     } catch (err) {
       setError(err.message || 'Failed to load users');
@@ -91,7 +87,7 @@ const RoleManagementPage = () => {
       ));
 
       // API call
-      await api.patch(`/admin/users/${user.id}/role`, { role: newRole });
+      await adminAPI.updateUserRole(user.id, newRole);
 
       setConfirmDialog(null);
       setEditingRole(null);

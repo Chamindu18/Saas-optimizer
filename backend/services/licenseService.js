@@ -217,7 +217,7 @@ const calculateTotalSpend = async () => {
     for (const license of activeLicenses) {
       const software = await SoftwareModel.getSoftwareById(license.software_id);
       if (software) {
-        totalSpend += software.price_per_seat;
+        totalSpend += parseFloat(software.price_per_seat) || 0;
       }
     }
 
@@ -271,7 +271,7 @@ const calculatePotentialSavings = async () => {
     for (const license of idleLicenses) {
       const software = await SoftwareModel.getSoftwareById(license.software_id);
       if (software) {
-        potentialSavings += software.price_per_seat;
+        potentialSavings += parseFloat(software.price_per_seat) || 0;
       }
     }
 
@@ -295,16 +295,19 @@ const getDashboardData = async () => {
   try {
     const spendData = await calculateTotalSpend();
     const savingsData = await calculatePotentialSavings();
+    const savingsPercentage = spendData.totalSpend > 0
+      ? parseFloat(((savingsData.potentialSavings / spendData.totalSpend) * 100).toFixed(2))
+      : 0;
 
     return {
       totalSpend: spendData.totalSpend,
       activeLicenseCount: spendData.activeLicenseCount,
+      activeCount: spendData.activeLicenseCount,
       idleLicenseCount: savingsData.idleLicenseCount,
       potentialSavings: savingsData.potentialSavings,
+      savingsPercentage,
       metrics: {
-        percentageOfSpendBeingWasted: spendData.totalSpend > 0
-          ? parseFloat(((savingsData.potentialSavings / spendData.totalSpend) * 100).toFixed(2))
-          : 0,
+        percentageOfSpendBeingWasted: savingsPercentage,
       },
     };
   } catch (error) {

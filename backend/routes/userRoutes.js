@@ -22,20 +22,20 @@ const router = express.Router();
 // Apply auth middleware to all routes in this router
 router.use(authMiddleware);
 
-// Get all users - admin only (for role management)
-router.get('/', requireRole('admin'), userController.getUsers);
+// Admins manage accounts; managers need a read-only directory for assignment.
+router.get('/', requireRole('admin', 'manager'), userController.getUsers);
 
 // Get user by ID
 router.get('/:id', userController.getUserById);
 
 // Create new user
-router.post('/', userController.createUser);
+router.post('/', requireRole('admin'), userController.createUser);
 
 // Update user
 router.put('/:id', userController.updateUser);
 
 // Delete user
-router.delete('/:id', userController.deleteUser);
+router.delete('/:id', requireRole('admin'), userController.deleteUser);
 
 // Update a user's role - admin only
 router.patch('/:id/role', requireRole('admin'), userController.updateUserRole);

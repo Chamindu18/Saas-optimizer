@@ -1,0 +1,113 @@
+/**
+ * Modal Styles
+ */
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: var(--z-modal-backdrop);
+  animation: fadeIn var(--duration-base) var(--ease-out);
+}
+
+.modal {
+  background-color: var(--color-neutral-0);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-2xl);
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideInUp var(--duration-base) var(--ease-out);
+  z-index: var(--z-modal);
+}
+
+.modal--sm {
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal--md {
+  width: 90%;
+  max-width: 600px;
+}
+
+.modal--lg {
+  width: 90%;
+  max-width: 800px;
+}
+
+.modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-6);
+  border-bottom: var(--border-width) solid var(--border-color);
+  gap: var(--space-4);
+}
+
+.modal__title {
+  font-size: var(--text-2xl);
+  font-weight: var(--fw-semibold);
+  margin: 0;
+}
+
+.modal__close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.5rem;
+  padding: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  transition: all var(--duration-base) var(--ease-in-out);
+  border-radius: var(--border-radius-md);
+}
+
+.modal__close:hover {
+  background-color: var(--color-neutral-100);
+  color: var(--text-primary);
+}
+
+.modal__content {
+  padding: var(--space-6);
+}
+
+.modal__footer {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  padding: var(--space-4) var(--space-6);
+  border-top: var(--border-width) solid var(--border-color);
+  background-color: var(--color-neutral-50);
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+@media (max-width: 640px) {
+  .modal {
+    width: 95% !important;
+    max-width: none;
+    max-height: 85vh;
+  }
+
+  .modal__header {
+    padding: var(--space-4);
+  }
+
+  .modal__content {
+    padding: var(--space-4);
+  }
+
+  .modal__footer {
+    padding: var(--space-3) var(--space-4);
+    flex-direction: column;
+  }
+}

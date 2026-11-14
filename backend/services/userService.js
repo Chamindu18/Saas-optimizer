@@ -7,6 +7,7 @@
  */
 
 import UserModel from '../models/User.js';
+import bcrypt from 'bcryptjs';
 
 /**
  * Get all users
@@ -40,20 +41,15 @@ const getUserById = async (userId) => {
  * Validates input and creates a new user record
  */
 const createUser = async (userData) => {
-  try {
-    // Validation
-    if (!userData.name || !userData.email) {
-      throw new Error('Name and email are required');
-    }
-
-    if (!userData.email.includes('@')) {
-      throw new Error('Invalid email format');
-    }
-
-    return await UserModel.createUser(userData);
-  } catch (error) {
-    throw new Error(`Failed to create user: ${error.message}`);
+  const { name, email, password } = userData;
+  if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' ||
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== 'string' || password.length < 8) {
+    const error = new Error('Valid name, email, and password of at least 8 characters are required');
+    error.status = 400;
+    throw error;
   }
+  const hash = await bcrypt.hash(password, 10);
+  return UserModel.createUser({ name: name.trim(), email: email.trim(), password: hash });
 };
 
 /**
@@ -61,78 +57,23 @@ const createUser = async (userData) => {
  * Updates user information
  */
 const updateUser = async (userId, userData) => {
-  try {
-    if (!userId) {
-      throw new Error('User ID is required');
-    }
-
-    const user = await UserModel.getUserById(Number(userId));
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    return await UserModel.updateUser(Number(userId), userData);
-  } catch (error) {
-    throw new Error(`Failed to update user: ${error.message}`);
+  const { name, email } = userData;
+  if ((name === undefined && email === undefined) ||
+      (name !== undefined && (typeof name !== 'string' || !name.trim())) ||
+      (email !== undefined && (typeof email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)))) {
+    const error = new Error('Provide a valid name or email');
+    error.status = 400;
+    throw error;
   }
-};
-
-/**
- * Delete a user
- * Removes a user from the system
- */
-const deleteUser = async (userId) => {
-  try {
-    if (!userId) {
-      throw new Error('User ID is required');
-    }
-
-    const user = await UserModel.getUserById(Number(userId));
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    return await UserModel.deleteUser(Number(userId));
-  } catch (error) {
-    throw new Error(`Failed to delete user: ${error.message}`);
+  const updated = await UserModel.updateUser(Number(userId), {
+    name: name?.trim(), email: email?.trim(),
+  });
+  if (!updated) {
+    const error = new Error('User not found');
+    error.status = 404;
+    throw error;
   }
-};
-
-/**
- * Count users with admin role
- * Returns the number of admin users in the system
- */
-const countAdmins = async () => {
-  try {
-    return await UserModel.countAdmins();
-  } catch (error) {
-    throw new Error(`Failed to count admins: ${error.message}`);
-  }
-};
-
-/**
- * Update a user's role
- * Changes a user's role to admin, manager, or viewer
- */
-const updateUserRole = async (userId, newRole) => {
-  try {
-    if (!userId) {
-      throw new Error('User ID is required');
-    }
-
-    if (!['admin', 'manager', 'viewer'].includes(newRole)) {
-      throw new Error('Invalid role. Must be one of: admin, manager, viewer');
-    }
-
-    const user = await UserModel.getUserById(Number(userId));
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    return await UserModel.updateUserRole(Number(userId), newRole);
-  } catch (error) {
-    throw new Error(`Failed to update user role: ${error.message}`);
-  }
+  return updated;
 };
 
 export default {
@@ -140,7 +81,4 @@ export default {
   getUserById,
   createUser,
   updateUser,
-  deleteUser,
-  countAdmins,
-  updateUserRole,
 };

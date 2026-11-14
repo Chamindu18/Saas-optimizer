@@ -11,7 +11,7 @@
  */
 
 import pool from '../config/db.js';
-import logAction from '../utils/auditLogger.js';
+import userController from './userController.js';
 
 /**
  * GET /api/admin/stats
@@ -33,8 +33,9 @@ const getAdminStats = async (req, res) => {
     const roleBreakdown = {};
     let totalUsers = 0;
     for (const row of usersResult.rows) {
-      roleBreakdown[row.role] = row.count;
-      totalUsers += row.count;
+      const count = parseInt(row.count, 10);
+      roleBreakdown[row.role.trim()] = count;
+      totalUsers += count;
     }
 
     // Count idle licenses
@@ -58,7 +59,7 @@ const getAdminStats = async (req, res) => {
        JOIN software ON licenses.software_id = software.id
        WHERE licenses.status = 'idle'`
     );
-    const potentialSavings = parseFloat(savingsResult.rows[0].savings).toFixed(2);
+    const potentialSavings = parseFloat(savingsResult.rows[0].savings);
 
     // Calculate total monthly spend (active licenses)
     const spendResult = await pool.query(
@@ -67,7 +68,7 @@ const getAdminStats = async (req, res) => {
        JOIN software ON licenses.software_id = software.id
        WHERE licenses.status = 'active'`
     );
-    const totalMonthlySpend = parseFloat(spendResult.rows[0].total).toFixed(2);
+    const totalMonthlySpend = parseFloat(spendResult.rows[0].total);
 
     // Calculate percent wasted
     const percentWasted = totalMonthlySpend > 0
@@ -90,8 +91,8 @@ const getAdminStats = async (req, res) => {
         roleBreakdown,
         idleLicenses,
         licensesPrunedThisMonth,
-        savingsRealized: potentialSavings,
-        totalMonthlySpend,
+        savingsRealized: parseFloat(potentialSavings.toFixed(2)),
+        totalMonthlySpend: parseFloat(totalMonthlySpend.toFixed(2)),
         percentWasted,
         lastHealthCheck,
         auditLogCount: await getAuditLogCount(),
@@ -151,169 +152,8 @@ const getAllUsers = async (req, res) => {
  * - Cannot change your own role
  * - Cannot demote the last admin
  */
-const changeUserRole = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { role } = req.body;
-    const adminId = req.user.id;
-
-    // Validate new role
-    if (!['admin', 'manager', 'viewer'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid role. Must be: admin, manager, or viewer',
-      });
-    }
-
-    // Check if user exists
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    const user = userResult.rows[0];
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // Prevent self-role change
-    if (parseInt(id) === adminId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot change your own role',
-        message: 'Ask another admin to change your role',
-      });
-    }
-
-    // Prevent demoting the last admin
-    if (user.role === 'admin' && role !== 'admin') {
-      const adminCountResult = await pool.query(
-        `SELECT COUNT(*) as count FROM users WHERE role = 'admin'`
-      );
-      const adminCount = parseInt(adminCountResult.rows[0].count, 10);
-
-      if (adminCount <= 1) {
-        return res.status(400).json({
-          success: false,
-          error: 'Cannot demote the last admin',
-          message: 'There must always be at least one admin in the system',
-        });
-      }
-    }
-
-    // Update the role
-    const updateResult = await pool.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING *',
-      [role, id]
-    );
-
-    const updatedUser = updateResult.rows[0];
-
-    // Log the action
-    await logAction({
-      userId: adminId,
-      userName: req.user.email,
-      userRole: req.user.role,
-      action: 'ROLE_CHANGE',
-      targetType: 'user',
-      targetId: parseInt(id),
-      targetName: user.email,
-      details: `Changed role from ${user.role} to ${role}`,
-      ipAddress: req.ip,
-    });
-
-    res.json({
-      success: true,
-      message: `User role updated to ${role}`,
-      data: updatedUser,
-    });
-  } catch (error) {
-    console.error('Change role error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to change user role',
-    });
-  }
-};
-
-/**
- * DELETE /api/admin/users/:id
- * Delete a user account
- * 
- * Safeguards:
- * - Cannot delete yourself
- * - Cannot delete another admin (except if you're deleting a manager/viewer)
- */
-const deleteUser = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const adminId = req.user.id;
-
-    // Check if user exists
-    const userResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
-    const user = userResult.rows[0];
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        error: 'User not found',
-      });
-    }
-
-    // Prevent deleting yourself
-    if (parseInt(id) === adminId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot delete your own account',
-        message: 'Ask another admin to delete your account',
-      });
-    }
-
-    // Prevent deleting the last admin
-    if (user.role === 'admin') {
-      const adminCountResult = await pool.query(
-        `SELECT COUNT(*) as count FROM users WHERE role = 'admin'`
-      );
-      const adminCount = parseInt(adminCountResult.rows[0].count, 10);
-
-      if (adminCount <= 1) {
-        return res.status(400).json({
-          success: false,
-          error: 'Cannot delete the last admin',
-          message: 'There must always be at least one admin in the system',
-        });
-      }
-    }
-
-    // Delete the user
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
-
-    // Log the action
-    await logAction({
-      userId: adminId,
-      userName: req.user.email,
-      userRole: req.user.role,
-      action: 'DELETE_USER',
-      targetType: 'user',
-      targetId: parseInt(id),
-      targetName: user.email,
-      details: `Deleted ${user.role} account`,
-      ipAddress: req.ip,
-    });
-
-    res.json({
-      success: true,
-      message: 'User deleted successfully',
-      data: { deletedUserId: id },
-    });
-  } catch (error) {
-    console.error('Delete user error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete user',
-    });
-  }
-};
+const changeUserRole = userController.updateUserRole;
+const deleteUser = userController.deleteUser;
 
 /**
  * GET /api/admin/audit-logs?page=1&limit=20&action=ROLE_CHANGE

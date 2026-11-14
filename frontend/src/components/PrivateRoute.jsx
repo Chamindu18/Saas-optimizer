@@ -32,3 +32,4 @@ const PrivateRoute = ({ children }) => {
 };
 
 export default PrivateRoute;
+export { PrivateRoute };

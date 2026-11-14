@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useRole } from '../hooks/useRole';
+import { getUser } from '../utils/auth';
 
 /**
  * Role Management Page
@@ -38,6 +39,8 @@ function RoleManagement() {
       navigate('/dashboard');
     }
   }, [isAdmin, navigate]);
+
+  const currentUserId = getUser()?.id || -1;
 
   // Fetch all users on component mount
   useEffect(() => {
@@ -199,9 +202,7 @@ function RoleManagement() {
                     <td style={pageStyles.tableCell}>
                       {user.name}
                       {/* "You" badge for current user */}
-                      {user.id === parseInt(
-                        localStorage.getItem('seatwatch_user_id') || '-1'
-                      ) && (
+                      {user.id === currentUserId && (
                         <span
                           style={{
                             marginLeft: '8px',
@@ -231,41 +232,15 @@ function RoleManagement() {
                         style={{
                           ...pageStyles.roleSelect,
                           // Disable the dropdown if it's the current user
-                          opacity:
-                            user.id ===
-                            parseInt(
-                              localStorage.getItem('seatwatch_user_id') || '-1'
-                            )
-                              ? 0.5
-                              : 1,
-                          pointerEvents:
-                            user.id ===
-                            parseInt(
-                              localStorage.getItem('seatwatch_user_id') || '-1'
-                            )
-                              ? 'none'
-                              : 'auto',
-                          cursor:
-                            user.id ===
-                            parseInt(
-                              localStorage.getItem('seatwatch_user_id') || '-1'
-                            )
-                              ? 'not-allowed'
-                              : 'pointer',
+                          opacity: user.id === currentUserId ? 0.5 : 1,
+                          pointerEvents: user.id === currentUserId ? 'none' : 'auto',
+                          cursor: user.id === currentUserId ? 'not-allowed' : 'pointer',
                         }}
                         value={user.role}
                         onChange={(e) => handleRoleChange(user, e.target.value)}
-                        disabled={
-                          user.id ===
-                          parseInt(
-                            localStorage.getItem('seatwatch_user_id') || '-1'
-                          )
-                        }
+                        disabled={user.id === currentUserId}
                         title={
-                          user.id ===
-                          parseInt(
-                            localStorage.getItem('seatwatch_user_id') || '-1'
-                          )
+                          user.id === currentUserId
                             ? "You can't change your own role"
                             : ''
                         }

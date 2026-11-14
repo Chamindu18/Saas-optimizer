@@ -7,6 +7,13 @@
  */
 
 import userService from '../services/userService.js';
+import { changeUserRole, deleteAccount } from '../services/accountMutations.js';
+import logAction from '../utils/auditLogger.js';
+import respondError from '../utils/respondError.js';
+
+const validId = (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0;
+const canRead = (actor, id) => actor.role === 'admin' || actor.role === 'manager' || Number(actor.id) === Number(id);
+const canEdit = (actor, id) => actor.role === 'admin' || Number(actor.id) === Number(id);
 
 /**
  * GET /api/users
@@ -21,10 +28,7 @@ const getUsers = async (req, res) => {
       count: users.length,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 
@@ -35,6 +39,8 @@ const getUsers = async (req, res) => {
 const getUserById = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!validId(id)) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+    if (!canRead(req.user, id)) return res.status(403).json({ success: false, error: 'Access denied' });
     const user = await userService.getUserById(id);
 
     if (!user) {
@@ -49,10 +55,7 @@ const getUserById = async (req, res) => {
       data: user,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 
@@ -63,16 +66,18 @@ const getUserById = async (req, res) => {
  * Request body:
  * {
  *   "name": "John Doe",
- *   "email": "john@example.com"
+ *   "email": "john@example.com",
+ *   "password": "a user-chosen password"
  * }
  */
 const createUser = async (req, res) => {
   try {
-    const { name, email } = req.body;
+    const { name, email, password } = req.body;
 
     const newUser = await userService.createUser({
       name,
       email,
+      password,
     });
 
     res.status(201).json({
@@ -81,10 +86,7 @@ const createUser = async (req, res) => {
       data: newUser,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 
@@ -101,6 +103,8 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const { id } = req.params;
+    if (!validId(id)) return res.status(400).json({ success: false, error: 'Invalid user ID' });
+    if (!canEdit(req.user, id)) return res.status(403).json({ success: false, error: 'Access denied' });
     const { name, email } = req.body;
 
     const updatedUser = await userService.updateUser(id, {
@@ -114,16 +118,7 @@ const updateUser = async (req, res) => {
       data: updatedUser,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 
@@ -135,7 +130,10 @@ const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const deletedUser = await userService.deleteUser(id);
+    const { target, result: deletedUser } = await deleteAccount(id, req.user.id);
+    await logAction({ userId: req.user.id, userName: req.user.email, userRole: req.user.role,
+      action: 'DELETE_USER', targetType: 'user', targetId: target.id, targetName: target.email,
+      details: `Deleted ${target.role} account`, ipAddress: req.ip });
 
     res.json({
       success: true,
@@ -143,16 +141,7 @@ const deleteUser = async (req, res) => {
       data: deletedUser,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 
@@ -171,63 +160,18 @@ const deleteUser = async (req, res) => {
  */
 const updateUserRole = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { role } = req.body;
-    const currentUserId = req.user.id;
-
-    // Validate role is one of the allowed values
-    if (!['admin', 'manager', 'viewer'].includes(role)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid role',
-        message: 'Role must be one of: admin, manager, viewer'
-      });
-    }
-
-    // Prevent user from changing their own role
-    if (parseInt(id) === currentUserId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot change your own role',
-        message: 'Ask another admin to change your role'
-      });
-    }
-
-    // Prevent demoting the last admin
-    if (role !== 'admin') {
-      // Count current admins in the system
-      const adminCountResult = await userService.countAdmins();
-      const adminCount = adminCountResult;
-
-      // If only 1 admin exists and we're demoting that admin, block it
-      if (adminCount <= 1) {
-        return res.status(400).json({
-          success: false,
-          error: 'Cannot demote the last admin',
-          message: 'There must always be at least one admin account'
-        });
-      }
-    }
-
-    // Update the role
-    const updatedUser = await userService.updateUserRole(id, role);
+    const { target, result: updatedUser } = await changeUserRole(req.params.id, req.user.id, req.body.role);
+    await logAction({ userId: req.user.id, userName: req.user.email, userRole: req.user.role,
+      action: 'ROLE_CHANGE', targetType: 'user', targetId: target.id, targetName: target.email,
+      details: `Changed role from ${target.role} to ${updatedUser.role}`, ipAddress: req.ip });
 
     res.json({
       success: true,
-      message: `User role updated to ${role}`,
+      message: `User role updated to ${updatedUser.role}`,
       data: updatedUser,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    respondError(res, error);
   }
 };
 

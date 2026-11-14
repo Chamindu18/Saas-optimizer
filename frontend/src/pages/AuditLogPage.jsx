@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import api from '../services/api';
+import { adminAPI } from '../services/api';
 import Card from '../components/ui/Card';
 import '../pages/styles/AuditLogPage.css';
 
@@ -32,31 +32,29 @@ const AuditLogPage = () => {
     { value: 'DELETE_SOFTWARE', label: 'Deleted Software' },
   ];
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    fetchLogs();
-  }, [page, selectedAction, searchUser]);
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
 
-  const fetchLogs = async () => {
-    try {
-      setLoading(true);
-      
-      let url = `/admin/audit-logs?page=${page}&limit=20`;
-      if (selectedAction) {
-        url += `&action=${selectedAction}`;
-      }
-
-      const response = await api.get(url);
-      setLogs(response.data);
+      const response = await adminAPI.getAuditLogs({
+        page,
+        limit: 20,
+        action: selectedAction || undefined,
+      });
+      setLogs(response.data || []);
       setTotalPages(response.pagination?.pages || 1);
       setError(null);
-    } catch (err) {
-      setError(err.message || 'Failed to load audit logs');
-      console.error('Fetch audit logs error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+      } catch (err) {
+        setError(err.message || 'Failed to load audit logs');
+        console.error('Fetch audit logs error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [page, selectedAction]);
 
   const handleLoadMore = () => {
     setPage(page + 1);

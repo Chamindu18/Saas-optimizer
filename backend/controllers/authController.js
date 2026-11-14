@@ -10,6 +10,15 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
 
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET is not configured');
+  }
+
+  return secret;
+};
+
 /**
  * POST /api/auth/register
  * Create a new user account
@@ -30,12 +39,14 @@ import pool from '../config/db.js';
  */
 const register = async (req, res) => {
   try {
+    const jwtSecret = getJwtSecret();
     // Accept 'fullName' from frontend, map to 'name' in DB
     const { name: fullName, email, password } = req.body;
     const name = fullName || '';  // Fallback if sent as 'name' from old code
 
     // Validation
-    if (!name || !email || !password) {
+    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== 'string') {
       return res.status(400).json({
         success: false,
         error: 'Name, email, and password are required',
@@ -69,23 +80,34 @@ const register = async (req, res) => {
     // Insert new user into database with default role 'viewer'
     // Never allow role to be passed in request body for security
     const result = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role',
+      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, created_at',
       [name, email, hashedPassword, 'viewer']
     );
 
     const newUser = result.rows[0];
+    const token = jwt.sign(
+      { userId: newUser.id, email: newUser.email, role: newUser.role },
+      jwtSecret,
+      { expiresIn: '7d' }
+    );
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
       userId: newUser.id,
+      token,
+      user: {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+      },
     });
   } catch (error) {
     console.error('Register error:', error.message);
     res.status(500).json({
       success: false,
       error: 'Registration failed',
-      details: error.message,
     });
   }
 };
@@ -117,7 +139,7 @@ const login = async (req, res) => {
     const { email, password } = req.body;
 
     // Validation
-    if (!email || !password) {
+    if (typeof email !== 'string' || !email || typeof password !== 'string' || !password) {
       return res.status(400).json({
         success: false,
         error: 'Email and password are required',
@@ -154,7 +176,7 @@ const login = async (req, res) => {
     // Generate JWT token with role included for frontend permission checks
     const token = jwt.sign(
       { userId: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || 'your-secret-key-change-in-env',
+      getJwtSecret(),
       { expiresIn: '7d' } // Token valid for 7 days
     );
 
@@ -175,7 +197,6 @@ const login = async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Login failed',
-      details: error.message,
     });
   }
 };

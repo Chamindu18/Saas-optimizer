@@ -19,7 +19,7 @@ import pool from '../config/db.js';
  */
 const getAllUsers = async () => {
   try {
-    const result = await pool.query('SELECT * FROM users ORDER BY id ASC');
+    const result = await pool.query('SELECT id, name, email, role, created_at FROM users ORDER BY id ASC');
     return result.rows;
   } catch (error) {
     console.error('Database error in getAllUsers:', error.message);
@@ -34,7 +34,7 @@ const getAllUsers = async () => {
  */
 const getUserById = async (id) => {
   try {
-    const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const result = await pool.query('SELECT id, name, email, role, created_at FROM users WHERE id = $1', [id]);
     return result.rows[0] || null;
   } catch (error) {
     console.error('Database error in getUserById:', error.message);
@@ -49,10 +49,10 @@ const getUserById = async (id) => {
  */
 const createUser = async (userData) => {
   try {
-    const { name, email } = userData;
+    const { name, email, password } = userData;
     const result = await pool.query(
-      'INSERT INTO users (name, email) VALUES ($1, $2) RETURNING *',
-      [name, email]
+      "INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, 'viewer') RETURNING id, name, email, role, created_at",
+      [name, email, password]
     );
     return result.rows[0];
   } catch (error) {
@@ -74,7 +74,7 @@ const updateUser = async (id, userData) => {
 
     // Dynamically build the UPDATE query based on provided fields
     for (const [key, value] of Object.entries(userData)) {
-      if (key !== 'id' && key !== 'created_at') { // Don't allow updating ID or created_at
+      if (['name', 'email'].includes(key) && value !== undefined) {
         fields.push(`${key} = $${paramCount}`);
         values.push(value);
         paramCount++;
@@ -89,7 +89,7 @@ const updateUser = async (id, userData) => {
     // Add the ID parameter
     values.push(id);
 
-    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING *`;
+    const query = `UPDATE users SET ${fields.join(', ')} WHERE id = $${paramCount} RETURNING id, name, email, role, created_at`;
     const result = await pool.query(query, values);
     
     return result.rows[0] || null;
@@ -107,7 +107,7 @@ const updateUser = async (id, userData) => {
 const deleteUser = async (id) => {
   try {
     // First fetch the user to return it
-    const selectResult = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+    const selectResult = await pool.query('SELECT id, name, email, role, created_at FROM users WHERE id = $1', [id]);
     const user = selectResult.rows[0];
 
     if (!user) {
@@ -146,7 +146,7 @@ const countAdmins = async () => {
 const updateUserRole = async (id, newRole) => {
   try {
     const result = await pool.query(
-      'UPDATE users SET role = $1 WHERE id = $2 RETURNING *',
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, email, role, created_at',
       [newRole, id]
     );
     return result.rows[0] || null;

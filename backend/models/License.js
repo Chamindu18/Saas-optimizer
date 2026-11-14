@@ -14,22 +14,7 @@
  */
 
 import pool from '../config/db.js';
-
-/**
- * BUSINESS LOGIC: Check if a license is idle
- * A license is idle if last_active_date is more than 30 days ago
- * Returns: 'idle' or 'active'
- */
-const checkIfIdle = (lastActiveDate) => {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); // 30 days in milliseconds
-  const lastActiveTime = new Date(lastActiveDate);
-
-  if (lastActiveTime < thirtyDaysAgo) {
-    return 'idle';
-  }
-  return 'active';
-};
+import { effectiveStatus } from '../services/licenseRules.js';
 
 /**
  * Get all licenses from the database
@@ -40,6 +25,7 @@ const getAllLicenses = async () => {
     const result = await pool.query(`
       SELECT
         licenses.*,
+        ${effectiveStatus} AS "effectiveStatus",
         employees.name AS "employeeName",
         employees.email AS "employeeEmail",
         software.name AS "softwareName",
@@ -52,7 +38,7 @@ const getAllLicenses = async () => {
       JOIN software ON licenses.software_id = software.id
       ORDER BY licenses.id ASC
     `);
-    return result.rows;
+    return result.rows.map(({ effectiveStatus, ...row }) => ({ ...row, status: effectiveStatus ?? row.status }));
   } catch (error) {
     console.error('Database error in getAllLicenses:', error.message);
     throw error;
@@ -69,6 +55,7 @@ const getLicenseById = async (id) => {
     const result = await pool.query(
       `SELECT
         licenses.*,
+        ${effectiveStatus} AS "effectiveStatus",
         employees.name AS "employeeName",
         employees.email AS "employeeEmail",
         software.name AS "softwareName",
@@ -82,7 +69,10 @@ const getLicenseById = async (id) => {
       WHERE licenses.id = $1`,
       [id]
     );
-    return result.rows[0] || null;
+    const row = result.rows[0];
+    if (!row) return null;
+    const { effectiveStatus: calculatedStatus, ...license } = row;
+    return { ...license, status: calculatedStatus ?? license.status };
   } catch (error) {
     console.error('Database error in getLicenseById:', error.message);
     throw error;
@@ -99,6 +89,7 @@ const getLicensesByEmployeeId = async (employeeId) => {
     const result = await pool.query(
       `SELECT
         licenses.*,
+        ${effectiveStatus} AS "effectiveStatus",
         employees.name AS "employeeName",
         employees.email AS "employeeEmail",
         software.name AS "softwareName",
@@ -113,7 +104,7 @@ const getLicensesByEmployeeId = async (employeeId) => {
       ORDER BY licenses.id ASC`,
       [employeeId]
     );
-    return result.rows;
+    return result.rows.map(({ effectiveStatus, ...row }) => ({ ...row, status: effectiveStatus ?? row.status }));
   } catch (error) {
     console.error('Database error in getLicensesByEmployeeId:', error.message);
     throw error;
@@ -130,6 +121,7 @@ const getLicensesBySoftwareId = async (softwareId) => {
     const result = await pool.query(
       `SELECT
         licenses.*,
+        ${effectiveStatus} AS "effectiveStatus",
         employees.name AS "employeeName",
         employees.email AS "employeeEmail",
         software.name AS "softwareName",
@@ -144,7 +136,7 @@ const getLicensesBySoftwareId = async (softwareId) => {
       ORDER BY licenses.id ASC`,
       [softwareId]
     );
-    return result.rows;
+    return result.rows.map(({ effectiveStatus, ...row }) => ({ ...row, status: effectiveStatus ?? row.status }));
   } catch (error) {
     console.error('Database error in getLicensesBySoftwareId:', error.message);
     throw error;
@@ -173,75 +165,23 @@ const createLicense = async (licenseData) => {
   }
 };
 
-/**
- * Update an existing license in the database
- * Args: id - License ID, licenseData - Object with fields to update
- * Returns: The updated license object
- */
-const updateLicense = async (id, licenseData) => {
-  try {
-    const fields = [];
-    const values = [];
-    let paramCount = 1;
-
-    for (const [key, value] of Object.entries(licenseData)) {
-      if (['employee_id', 'software_id', 'assigned_date', 'last_active_date', 'status'].includes(key) && value !== undefined) {
-        fields.push(`${key} = $${paramCount}`);
-        values.push(value);
-        paramCount++;
-      }
-    }
-
-    if (fields.length === 0) {
-      return null;
-    }
-
-    fields.push(`updated_at = NOW()`);
-    values.push(id);
-
-    const result = await pool.query(
-      `UPDATE licenses SET ${fields.join(', ')} WHERE id=$${paramCount} RETURNING *`,
-      values
-    );
-    return result.rows[0] || null;
-  } catch (error) {
-    console.error('Database error in updateLicense:', error.message);
-    throw error;
-  }
-};
-
-/**
- * Delete a license from the database
- * Args: id - License ID
- * Returns: The deleted license object
- */
-const deleteLicense = async (id) => {
-  try {
-    // First fetch the license to return it
-    const selectResult = await pool.query('SELECT * FROM licenses WHERE id = $1', [id]);
-    const license = selectResult.rows[0];
-
-    if (!license) {
-      return null;
-    }
-
-    // Then delete the license
-    await pool.query('DELETE FROM licenses WHERE id = $1', [id]);
-    
-    return license;
-  } catch (error) {
-    console.error('Database error in deleteLicense:', error.message);
-    throw error;
-  }
+const getIdleLicenses = async () => {
+  const result = await pool.query(`SELECT licenses.*,
+      employees.name AS "employeeName", employees.email AS "employeeEmail",
+      software.name AS "softwareName", software.category AS "softwareCategory",
+      software.price_per_seat AS cost,
+      licenses.assigned_date AS "assignedDate", licenses.last_active_date AS "lastActivityDate"
+    FROM licenses JOIN employees ON employees.id = licenses.employee_id
+      JOIN software ON software.id = licenses.software_id
+    WHERE ${effectiveStatus} = 'idle' ORDER BY licenses.id`);
+  return result.rows.map(row => ({ ...row, status: 'idle' }));
 };
 
 export default {
-  checkIfIdle,
   getAllLicenses,
   getLicenseById,
   getLicensesByEmployeeId,
   getLicensesBySoftwareId,
+  getIdleLicenses,
   createLicense,
-  updateLicense,
-  deleteLicense,
 };

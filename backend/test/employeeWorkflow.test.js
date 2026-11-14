@@ -152,6 +152,13 @@ test('license assignment targets employees, and assigned employees cannot be del
   assert.equal(licenses.length, 1);
 });
 
+test('license mutation roles are enforced before database access', async () => {
+  assert.equal((await request('PUT', '/api/licenses/1', 3, { status: 'active' })).status, 403);
+  assert.equal((await request('POST', '/api/licenses/1/prune', 2)).status, 403);
+  assert.equal((await request('DELETE', '/api/licenses/1', 2)).status, 403);
+  assert.equal((await request('PUT', '/api/licenses/1', 2, { status: 'active' })).status, 403);
+});
+
 test('concurrent license restriction is returned as a conflict', async () => {
   restrictRace = true;
   const result = await request('DELETE', '/api/employees/1', 1);
@@ -201,7 +208,7 @@ test('migration runner records each migration and skips it on a second run', asy
   } };
   await runMigrations(client);
   await runMigrations(client);
-  assert.deepEqual([...applied], ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql']);
+  assert.deepEqual([...applied], ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql', '003-retain-license-history.sql']);
   assert.equal(employeeTableCreates, 1);
 });
 
@@ -221,7 +228,7 @@ test('existing complete legacy schema is baselined without rerunning account pro
     return { rows: [], rowCount: 0 };
   } };
   await runMigrations(client);
-  assert.deepEqual([...applied], ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql']);
+  assert.deepEqual([...applied], ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql', '003-retain-license-history.sql']);
   assert.ok(!executed.some((sql) => sql.includes("WHERE email = 'admin@example.com'")));
 });
 

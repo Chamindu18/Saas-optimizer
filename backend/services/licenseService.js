@@ -1,332 +1,98 @@
-/**
- * License Service
- * 
- * Contains all business logic related to licenses.
- * Handles core features like idle detection, spend calculation, etc.
- * 
- * IMPORTANT: All LicenseModel calls use 'await' because Model functions return Promises.
- * Without await, functions return unresolved Promises instead of actual data.
- * This ensures data flows correctly: Controller → Service (await) → Model (await) → Database
- */
-
+import pool from '../config/db.js';
 import LicenseModel from '../models/License.js';
 import SoftwareModel from '../models/Software.js';
 import { getEmployee } from '../models/Employee.js';
+import { effectiveStatus, validId, validActivityDate, httpError } from './licenseRules.js';
 
-/**
- * Get all licenses
- * 
- * Automatically recalculates and updates status based on idle logic.
- * If a license is marked 'active' but has been inactive for 30+ days:
- * - Updates the status in the returned data
- * - Updates the database to persist the change
- */
-const getAllLicenses = async () => {
-  try {
-    let licenses = await LicenseModel.getAllLicenses();
-    
-    // Loop through each license and recalculate status
-    for (const license of licenses) {
-      // Only check active licenses - don't change pruned or already idle
-      if (license.status === 'active') {
-        // Get current date and check if license is idle
-        const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
-        
-        // If status changed from active to idle, update the database
-        if (calculatedStatus === 'idle') {
-          await LicenseModel.updateLicense(license.id, {
-            employee_id: license.employee_id,
-            software_id: license.software_id,
-            assigned_date: license.assigned_date,
-            last_active_date: license.last_active_date,
-            status: 'idle',  // Update status to idle in database
-          });
-          license.status = 'idle';  // Also update in returned data
-        }
-      }
-    }
-    
-    return licenses;
-  } catch (error) {
-    throw new Error(`Failed to fetch licenses: ${error.message}`);
-  }
+const getAllLicenses = () => LicenseModel.getAllLicenses();
+const getLicenseById = (id) => {
+  if (!validId(id)) throw httpError(400, 'Valid license ID required');
+  return LicenseModel.getLicenseById(Number(id));
 };
-
-/**
- * Get license by ID
- * 
- * Automatically recalculates and updates status based on idle logic.
- * If license is marked 'active' but inactive for 30+ days:
- * - Updates the status in the returned data
- * - Updates the database to persist the change
- */
-const getLicenseById = async (licenseId) => {
-  try {
-    if (!licenseId) {
-      throw new Error('License ID is required');
-    }
-    let license = await LicenseModel.getLicenseById(Number(licenseId));
-    
-    if (!license) {
-      return null;
-    }
-    
-    // Recalculate status if license is active
-    if (license.status === 'active') {
-      const calculatedStatus = LicenseModel.checkIfIdle(license.last_active_date);
-      
-      // If status changed from active to idle, update the database
-      if (calculatedStatus === 'idle') {
-        await LicenseModel.updateLicense(Number(licenseId), {
-          employee_id: license.employee_id,
-          software_id: license.software_id,
-          assigned_date: license.assigned_date,
-          last_active_date: license.last_active_date,
-          status: 'idle',  // Update status to idle in database
-        });
-        license.status = 'idle';  // Also update in returned data
-      }
-    }
-    
-    return license;
-  } catch (error) {
-    throw new Error(`Failed to fetch license: ${error.message}`);
-  }
+const assignLicense = async ({ employee_id, software_id }) => {
+  if (!validId(employee_id) || !validId(software_id))
+    throw httpError(400, 'Valid employee and software IDs are required');
+  if (!await getEmployee(Number(employee_id))) throw httpError(404, 'Employee not found');
+  if (!await SoftwareModel.getSoftwareById(Number(software_id))) throw httpError(404, 'Software not found');
+  return LicenseModel.createLicense({ employee_id: Number(employee_id), software_id: Number(software_id) });
 };
-
-/**
- * Assign a license to a user
- * Creates a new license linking a user to software
- * 
- * CRITICAL FIX: Added 'await' to resolve Promises from Model calls
- */
-const assignLicense = async (licenseData) => {
-    if (!Number.isSafeInteger(Number(licenseData.employee_id)) || Number(licenseData.employee_id) < 1 ||
-        !Number.isSafeInteger(Number(licenseData.software_id)) || Number(licenseData.software_id) < 1) {
-      const error = new Error('Valid employee and software IDs are required');
-      error.status = 400;
-      throw error;
-    }
-
-    const employee = await getEmployee(Number(licenseData.employee_id));
-    if (!employee) {
-      const error = new Error('Employee not found');
-      error.status = 404;
-      throw error;
-    }
-
-    // Check if software exists (must await!)
-    const software = await SoftwareModel.getSoftwareById(Number(licenseData.software_id));
-    if (!software) {
-      const error = new Error('Software not found');
-      error.status = 404;
-      throw error;
-    }
-
-    return LicenseModel.createLicense({
-      employee_id: Number(licenseData.employee_id),
-      software_id: Number(licenseData.software_id),
-    });
+const updateLicense = async (id, data, role) => {
+  if (!validId(id)) throw httpError(400, 'Valid license ID required');
+  if (!data || !Object.keys(data).length || Object.keys(data).some(k => !['status', 'last_active_date'].includes(k)))
+    throw httpError(400, 'Only status and last_active_date may be updated');
+  if (data.status !== undefined && data.status !== 'active')
+    throw httpError(400, 'Use prune to deactivate; idle status is calculated');
+  if (data.last_active_date !== undefined && !validActivityDate(data.last_active_date))
+    throw httpError(400, 'A valid non-future ISO activity timestamp is required');
+  if (data.status === 'active' && role !== 'admin')
+    throw httpError(403, 'Only admins may explicitly reactivate a license');
+  const result = await pool.query(`UPDATE licenses SET
+      last_active_date = COALESCE($2::timestamptz, last_active_date),
+      status = CASE WHEN $3::boolean THEN 'active' ELSE status END,
+      updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1
+      AND (NOT $3::boolean OR COALESCE($2::timestamptz, last_active_date) > CURRENT_TIMESTAMP - INTERVAL '30 days')
+      AND (status <> 'pruned' OR ($3::boolean AND $2::timestamptz IS NOT NULL))
+    RETURNING *`, [Number(id), data.last_active_date ?? null, data.status === 'active']);
+  if (result.rows[0]) return result.rows[0];
+  if (!await LicenseModel.getLicenseById(Number(id))) throw httpError(404, 'License not found');
+  throw httpError(409, 'Transition requires explicit reactivation with recent activity');
 };
-
-/**
- * Update a license
- * 
- * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
- */
-const updateLicense = async (licenseId, licenseData) => {
-  try {
-    if (!licenseId) {
-      throw new Error('License ID is required');
-    }
-
-    const license = await LicenseModel.getLicenseById(Number(licenseId));
-    if (!license) {
-      throw new Error('License not found');
-    }
-
-    const updatedLicense = await LicenseModel.updateLicense(Number(licenseId), licenseData);
-    return updatedLicense;
-  } catch (error) {
-    throw new Error(`Failed to update license: ${error.message}`);
-  }
+const pruneLicense = async (id) => {
+  if (!validId(id)) throw httpError(400, 'Valid license ID required');
+  const result = await pool.query(`UPDATE licenses SET status = 'pruned', updated_at = CURRENT_TIMESTAMP
+    WHERE id = $1 AND status <> 'pruned' RETURNING *`, [Number(id)]);
+  if (result.rows[0]) return result.rows[0];
+  const existing = await LicenseModel.getLicenseById(Number(id));
+  if (!existing) throw httpError(404, 'License not found');
+  return existing;
 };
-
-/**
- * Prune (delete) a license
- * When a license is removed, its status changes to "pruned"
- * 
- * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
- */
-const pruneLicense = async (licenseId) => {
-  try {
-    if (!licenseId) {
-      throw new Error('License ID is required');
-    }
-
-    const license = await LicenseModel.getLicenseById(Number(licenseId));
-    if (!license) {
-      throw new Error('License not found');
-    }
-
-    return await LicenseModel.updateLicense(Number(licenseId), { 
-      employee_id: license.employee_id,
-      software_id: license.software_id,
-      assigned_date: license.assigned_date,
-      last_active_date: license.last_active_date,
-      status: 'pruned'
-    });
-  } catch (error) {
-    throw new Error(`Failed to prune license: ${error.message}`);
-  }
+const deleteLicense = async (id) => {
+  if (!validId(id)) throw httpError(400, 'Valid license ID required');
+  if (!await LicenseModel.getLicenseById(Number(id))) throw httpError(404, 'License not found');
+  throw httpError(409, 'License history is retained; prune this license instead');
 };
-
-/**
- * Delete a license
- * 
- * CRITICAL FIX: Added 'await' to resolve Promises from LicenseModel
- */
-const deleteLicense = async (licenseId) => {
-  try {
-    if (!licenseId) {
-      throw new Error('License ID is required');
-    }
-
-    const license = await LicenseModel.getLicenseById(Number(licenseId));
-    if (!license) {
-      throw new Error('License not found');
-    }
-
-    return await LicenseModel.deleteLicense(Number(licenseId));
-  } catch (error) {
-    throw new Error(`Failed to delete license: ${error.message}`);
-  }
+const detectIdleLicenses = () => LicenseModel.getIdleLicenses();
+const reconcileIdleStatuses = async () => {
+  const result = await pool.query(`UPDATE licenses SET status = ${effectiveStatus}, updated_at = CURRENT_TIMESTAMP
+    WHERE status <> 'pruned' AND status <> ${effectiveStatus} RETURNING id`);
+  return result.rowCount;
 };
-
-/**
- * Calculate total spend
- * Sum of all active licenses
- * 
- * Formula: Sum of (license.software.price_per_seat) for all active licenses
- * 
- * CRITICAL FIX: Added 'await' to resolve the Promise from getAllLicenses
- */
-const calculateTotalSpend = async () => {
-  try {
-    const licenses = await LicenseModel.getAllLicenses();
-    const activeLicenses = licenses.filter(license => license.status === 'active');
-
-    let totalSpend = 0;
-    for (const license of activeLicenses) {
-      const software = await SoftwareModel.getSoftwareById(license.software_id);
-      if (software) {
-        totalSpend += parseFloat(software.price_per_seat) || 0;
-      }
-    }
-
-    return {
-      totalSpend: parseFloat(totalSpend.toFixed(2)),
-      activeLicenseCount: activeLicenses.length,
-    };
-  } catch (error) {
-    throw new Error(`Failed to calculate total spend: ${error.message}`);
-  }
+const metrics = async () => {
+  const { rows: [r] } = await pool.query(`WITH classified AS (
+      SELECT ${effectiveStatus} AS status, software.price_per_seat AS price, software.category
+      FROM licenses JOIN software ON software.id = licenses.software_id
+    ) SELECT
+      COUNT(*) FILTER (WHERE status = 'active')::int AS active_count,
+      COUNT(*) FILTER (WHERE status = 'idle')::int AS idle_count,
+      COUNT(*) FILTER (WHERE status = 'pruned')::int AS pruned_count,
+      COALESCE(SUM(price) FILTER (WHERE status <> 'pruned'), 0)::numeric(20,2)::text AS total_spend,
+      COALESCE(SUM(price) FILTER (WHERE status = 'idle'), 0)::numeric(20,2)::text AS potential_savings,
+      COALESCE(ROUND(100 * SUM(price) FILTER (WHERE status = 'idle') /
+        NULLIF(SUM(price) FILTER (WHERE status <> 'pruned'), 0), 2), 0)::numeric(8,2)::text AS savings_percentage
+      ,(SELECT COALESCE(jsonb_agg(jsonb_build_object('category', category, 'monthlySpend', spend)
+           ORDER BY category), '[]'::jsonb)
+        FROM (SELECT category, SUM(price)::numeric(20,2)::text AS spend
+          FROM classified WHERE status <> 'pruned' GROUP BY category) categories) AS spending_by_category
+    FROM classified`);
+  return { activeLicenseCount: r.active_count, idleLicenseCount: r.idle_count,
+    prunedLicenseCount: r.pruned_count, totalSpend: r.total_spend,
+    potentialSavings: r.potential_savings, savingsPercentage: r.savings_percentage,
+    spendingByCategory: r.spending_by_category };
 };
-
-/**
- * Detect idle licenses
- * A license is idle if last_active_date is more than 30 days old
- * 
- * Returns licenses that are currently active but haven't been used in 30+ days
- * 
- * CRITICAL FIX: Added 'await' to resolve the Promise from getAllLicenses
- */
-const detectIdleLicenses = async () => {
-  try {
-    const licenses = await LicenseModel.getAllLicenses();
-
-    const idleLicenses = licenses.filter(license => {
-      // Only check active licenses
-      if (license.status !== 'active') return false;
-      
-      // Use the model's checkIfIdle logic
-      const idleStatus = LicenseModel.checkIfIdle(license.last_active_date);
-      return idleStatus === 'idle';
-    });
-
-    return idleLicenses;
-  } catch (error) {
-    throw new Error(`Failed to detect idle licenses: ${error.message}`);
-  }
-};
-
-/**
- * Calculate potential savings
- * Sum of costs of all idle licenses
- * 
- * CRITICAL FIX: Added 'await' to resolve the Promise from detectIdleLicenses
- */
-const calculatePotentialSavings = async () => {
-  try {
-    const idleLicenses = await detectIdleLicenses();
-
-    let potentialSavings = 0;
-    for (const license of idleLicenses) {
-      const software = await SoftwareModel.getSoftwareById(license.software_id);
-      if (software) {
-        potentialSavings += parseFloat(software.price_per_seat) || 0;
-      }
-    }
-
-    return {
-      potentialSavings: parseFloat(potentialSavings.toFixed(2)),
-      idleLicenseCount: idleLicenses.length,
-      idleLicenses,
-    };
-  } catch (error) {
-    throw new Error(`Failed to calculate potential savings: ${error.message}`);
-  }
-};
-
-/**
- * Get dashboard data
- * Returns key metrics: total spend, idle count, and potential savings
- * 
- * CRITICAL FIX: Added 'await' to resolve Promises from service functions
- */
 const getDashboardData = async () => {
-  try {
-    const spendData = await calculateTotalSpend();
-    const savingsData = await calculatePotentialSavings();
-    const savingsPercentage = spendData.totalSpend > 0
-      ? parseFloat(((savingsData.potentialSavings / spendData.totalSpend) * 100).toFixed(2))
-      : 0;
-
-    return {
-      totalSpend: spendData.totalSpend,
-      activeLicenseCount: spendData.activeLicenseCount,
-      activeCount: spendData.activeLicenseCount,
-      idleLicenseCount: savingsData.idleLicenseCount,
-      potentialSavings: savingsData.potentialSavings,
-      savingsPercentage,
-      metrics: {
-        percentageOfSpendBeingWasted: savingsPercentage,
-      },
-    };
-  } catch (error) {
-    throw new Error(`Failed to get dashboard data: ${error.message}`);
-  }
+  const m = await metrics();
+  return { ...m, activeCount: m.activeLicenseCount,
+    metrics: { percentageOfSpendBeingWasted: m.savingsPercentage } };
 };
-
-export default {
-  getAllLicenses,
-  getLicenseById,
-  assignLicense,
-  updateLicense,
-  pruneLicense,
-  deleteLicense,
-  calculateTotalSpend,
-  detectIdleLicenses,
-  calculatePotentialSavings,
-  getDashboardData,
+const calculateTotalSpend = async () => {
+  const m = await metrics();
+  return { totalSpend: m.totalSpend, activeLicenseCount: m.activeLicenseCount };
 };
+const calculatePotentialSavings = async () => {
+  const [m, idleLicenses] = await Promise.all([metrics(), detectIdleLicenses()]);
+  return { potentialSavings: m.potentialSavings, idleLicenseCount: m.idleLicenseCount, idleLicenses };
+};
+export default { getAllLicenses, getLicenseById, assignLicense, updateLicense, pruneLicense,
+  deleteLicense, detectIdleLicenses, reconcileIdleStatuses, metrics, getDashboardData,
+  calculateTotalSpend, calculatePotentialSavings };

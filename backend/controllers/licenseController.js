@@ -50,10 +50,7 @@ const getLicenseById = async (req, res) => {
       data: license,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
@@ -101,12 +98,7 @@ const assignLicense = async (req, res) => {
 const updateLicense = async (req, res) => {
   try {
     const { id } = req.params;
-    const { last_active_date, status } = req.body;
-
-    const updatedLicense = await licenseService.updateLicense(id, {
-      last_active_date,
-      status,
-    });
+    const updatedLicense = await licenseService.updateLicense(id, req.body, req.user?.role);
 
     res.json({
       success: true,
@@ -114,22 +106,13 @@ const updateLicense = async (req, res) => {
       data: updatedLicense,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
 /**
  * DELETE /api/licenses/:id
- * Delete a license
+ * Return a conflict for an existing historical assignment.
  */
 const deleteLicense = async (req, res) => {
   try {
@@ -158,23 +141,14 @@ const deleteLicense = async (req, res) => {
       data: deletedLicense,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
 /**
  * POST /api/licenses/:id/prune
  * Prune (disable) a license
- * Changes status from 'active' to 'pruned'
+ * Changes an active or idle assignment to 'pruned'.
  */
 const pruneLicense = async (req, res) => {
   try {
@@ -203,16 +177,7 @@ const pruneLicense = async (req, res) => {
       data: prunedLicense,
     });
   } catch (error) {
-    if (error.message.includes('not found')) {
-      return res.status(404).json({
-        success: false,
-        error: error.message,
-      });
-    }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 

@@ -90,9 +90,9 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
     assert.ok(constraints.some((row) => row.definition.includes('FOREIGN KEY (employee_id) REFERENCES employees(id) ON DELETE RESTRICT')));
     assert.ok(constraints.some((row) => row.definition.includes('FOREIGN KEY (account_id) REFERENCES users(id) ON DELETE SET NULL')));
     assert.deepEqual((await pool.query('SELECT name FROM schema_migrations ORDER BY name')).rows.map((r) => r.name),
-      ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql']);
+      ['000-core-schema.sql', '001-admin-setup.sql', '002-employees.sql', '003-retain-license-history.sql']);
     await migrate(pool);
-    assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 3);
+    assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 4);
 
     const { default: app } = await import('../app.js');
     server = app.listen(0, '127.0.0.1');
@@ -157,6 +157,77 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
     assert.equal((await pool.query('SELECT COUNT(*)::int AS count FROM users WHERE id = $1', [admin.id]))
       .rows[0].count, 1);
 
+    // Lifecycle and money use the same PostgreSQL clock and NUMERIC values.
+    const licenseService = (await import('../services/licenseService.js')).default;
+    await pool.query('UPDATE software SET price_per_seat = $1 WHERE id = $2', ['0.10', software.id]);
+    const second = (await pool.query(`INSERT INTO software (name, category, price_per_seat)
+      VALUES ('Second Tool', 'Testing', 0.20) RETURNING id`)).rows[0].id;
+    const free = (await pool.query(`INSERT INTO software (name, category, price_per_seat)
+      VALUES ('Free Tool', 'Testing', 0) RETURNING id`)).rows[0].id;
+    const old = (await pool.query(`INSERT INTO licenses (employee_id, software_id, last_active_date)
+      VALUES ($1, $2, CURRENT_TIMESTAMP - INTERVAL '31 days') RETURNING id`, [employeeId, second])).rows[0].id;
+    const zero = (await pool.query(`INSERT INTO licenses (employee_id, software_id, last_active_date)
+      VALUES ($1, $2, CURRENT_TIMESTAMP - INTERVAL '30 days') RETURNING id`, [employeeId, free])).rows[0].id;
+    await pool.query(`UPDATE licenses SET last_active_date = CURRENT_TIMESTAMP - INTERVAL '29 days' WHERE id = $1`,
+      [license.body.data.id]);
+    assert.equal((await request(server, 'POST', '/api/licenses',
+      { employee_id: employeeId, software_id: second }, token)).status, 409);
+    assert.equal((await request(server, 'GET', '/api/licenses/not-an-id', undefined, token)).status, 400);
+    assert.equal((await request(server, 'PUT', `/api/software/${second}`,
+      { price_per_seat: 0.001 }, token)).status, 400);
+    const summary = await request(server, 'GET', '/api/dashboard/summary', undefined, token);
+    const dashboard = await request(server, 'GET', '/api/licenses/dashboard/metrics', undefined, token);
+    const idle = await request(server, 'GET', '/api/licenses/idle/list', undefined, token);
+    assert.deepEqual(summary.body.data, { active: 1, idle: 2, pruned: 0 });
+    assert.equal(idle.body.count, 2);
+    assert.equal(dashboard.body.data.totalSpend, '0.30');
+    assert.equal(dashboard.body.data.potentialSavings, '0.20');
+    assert.equal(dashboard.body.data.savingsPercentage, '66.67');
+    assert.deepEqual(dashboard.body.data.spendingByCategory,
+      [{ category: 'Testing', monthlySpend: '0.30' }]);
+    assert.equal(dashboard.body.data.idleLicenseCount, idle.body.count);
+    const { effectiveStatus } = await import('../services/licenseRules.js');
+    const edgeCases = (await pool.query(`WITH licenses AS (
+      SELECT 'active'::text AS status, NULL::timestamptz AS last_active_date
+      UNION ALL SELECT 'active', CURRENT_TIMESTAMP + INTERVAL '1 day'
+      UNION ALL SELECT 'active', CURRENT_TIMESTAMP - INTERVAL '30 days'
+      UNION ALL SELECT 'pruned', CURRENT_TIMESTAMP - INTERVAL '31 days'
+    ) SELECT ${effectiveStatus} AS status FROM licenses`)).rows.map(r => r.status);
+    assert.deepEqual(edgeCases, ['active', 'active', 'idle', 'pruned']);
+    assert.equal((await request(server, 'GET', '/api/dashboard', undefined, token)).body.data.totalSpend, '0.30');
+    assert.equal((await licenseService.reconcileIdleStatuses()), 2);
+    assert.equal((await licenseService.reconcileIdleStatuses()), 0);
+    await pool.query("UPDATE licenses SET status = 'active' WHERE id = $1", [old]);
+    assert.equal((await Promise.all([licenseService.reconcileIdleStatuses(),
+      licenseService.reconcileIdleStatuses()])).reduce((a, b) => a + b), 1);
+    assert.equal((await request(server, 'GET', '/api/licenses/idle/list', undefined, token)).body.count, 2);
+    assert.equal((await request(server, 'PUT', `/api/licenses/${old}`,
+      { status: 'idle' }, token)).status, 400);
+    assert.equal((await request(server, 'PUT', `/api/licenses/${old}`,
+      { last_active_date: '2099-01-01T00:00:00Z' }, token)).status, 400);
+    assert.equal((await request(server, 'PUT', `/api/licenses/${old}`,
+      { last_active_date: '2026-02-30T00:00:00Z' }, token)).status, 400);
+    assert.equal((await request(server, 'PUT', `/api/licenses/${old}`,
+      { status: 'active' }, token)).status, 409);
+    assert.equal((await request(server, 'DELETE', `/api/licenses/${old}`, undefined, token)).status, 409);
+    assert.equal((await request(server, 'DELETE', `/api/software/${second}`, undefined, token)).status, 409);
+    await assert.rejects(pool.query('DELETE FROM software WHERE id = $1', [second]), { code: '23001' });
+    assert.equal((await request(server, 'POST', `/api/licenses/${old}/prune`, undefined, token)).status, 200);
+    assert.equal((await request(server, 'POST', '/api/licenses',
+      { employee_id: employeeId, software_id: second }, token)).status, 409);
+    assert.equal((await licenseService.reconcileIdleStatuses()), 0);
+    assert.equal((await request(server, 'GET', '/api/dashboard/summary', undefined, token)).body.data.pruned, 1);
+    assert.equal((await request(server, 'GET', '/api/licenses/idle/list', undefined, token)).body.count, 1);
+    assert.equal((await request(server, 'GET', '/api/licenses/dashboard/metrics', undefined, token)).body.data.totalSpend, '0.10');
+    const recent = new Date().toISOString();
+    assert.equal((await request(server, 'PUT', `/api/licenses/${old}`,
+      { status: 'active', last_active_date: recent }, token)).status, 200);
+    assert.equal((await request(server, 'GET', '/api/dashboard/summary', undefined, token)).body.data.active, 2);
+    await pool.query('UPDATE software SET price_per_seat = 0 WHERE id IN ($1, $2)', [software.id, second]);
+    assert.equal((await request(server, 'GET', '/api/licenses/dashboard/metrics', undefined, token)).body.data.savingsPercentage, '0.00');
+    assert.equal((await request(server, 'GET', '/api/licenses/dashboard/metrics', undefined, token)).body.data.totalSpend, '0.00');
+    assert.equal((await pool.query('SELECT status FROM licenses WHERE id = $1', [zero])).rows[0].status, 'idle');
+
     const migrationDir = new URL('../migrations/', import.meta.url);
     for (const file of ['000-core-schema.sql', '001-admin-setup.sql']) {
       await legacyPool.query(fs.readFileSync(new URL(file, migrationDir), 'utf8'));
@@ -185,7 +256,7 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
     assert.equal((await legacyPool.query('SELECT account_id FROM employees WHERE id = 73')).rows[0].account_id, null);
     assert.equal((await legacyPool.query('SELECT employee_id FROM licenses WHERE id = 101')).rows[0].employee_id, '73');
     await migrate(legacyPool);
-    assert.equal((await legacyPool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 3);
+    assert.equal((await legacyPool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 4);
 
     const failingClient = await failurePool.connect();
     try {
@@ -199,7 +270,7 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
     assert.deepEqual((await failurePool.query('SELECT name FROM schema_migrations ORDER BY name')).rows.map((r) => r.name),
       ['000-core-schema.sql', '001-admin-setup.sql']);
     await migrate(failurePool);
-    assert.equal((await failurePool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 3);
+    assert.equal((await failurePool.query('SELECT COUNT(*)::int AS count FROM schema_migrations')).rows[0].count, 4);
   } finally {
     if (server) await new Promise((resolve) => server.close(resolve));
     await Promise.all([pool.end(), legacyPool.end(), failurePool.end()]);

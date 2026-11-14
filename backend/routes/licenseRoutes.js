@@ -7,9 +7,9 @@
  * Endpoints:
  * GET    /api/licenses                    - Get all licenses
  * GET    /api/licenses/:id                - Get license by ID
- * POST   /api/licenses                    - Assign license to user
+ * POST   /api/licenses                    - Assign license to employee
  * PUT    /api/licenses/:id                - Update license
- * DELETE /api/licenses/:id                - Delete license
+ * DELETE /api/licenses/:id                - Retained history; returns 409
  * POST   /api/licenses/:id/prune          - Prune (disable) license
  * GET    /api/licenses/dashboard/metrics  - Get dashboard metrics
  * GET    /api/licenses/idle/list          - Get all idle licenses
@@ -46,7 +46,7 @@ router.put('/:id', requireRole('admin', 'manager'), licenseController.updateLice
 // Prune license - admin only (special destructive action)
 router.post('/:id/prune', requireRole('admin'), licenseController.pruneLicense);
 
-// Delete license - admin only
+// Historical assignments cannot be deleted; authenticated admins receive 409.
 router.delete('/:id', requireRole('admin'), licenseController.deleteLicense);
 
 export default router;

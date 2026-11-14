@@ -1,162 +1,31 @@
-/**
- * Dashboard Service
- * Calculates analytics: total spend, potential savings, idle users
- */
-
 import pool from '../config/db.js';
-import LicenseModel from '../models/License.js';
+import licenseService from './licenseService.js';
+import { effectiveStatus } from './licenseRules.js';
 
-const getTotalSpend = async () => {
-  try {
-    const query = `
-      SELECT COALESCE(SUM(software.price_per_seat), 0) as total_spend
-      FROM licenses
-      JOIN software ON licenses.software_id = software.id
-      WHERE licenses.status = 'active'
-    `;
-    const result = await pool.query(query);
-    return { totalSpend: parseFloat(result.rows[0].total_spend).toFixed(2) };
-  } catch (error) {
-    throw new Error(`Failed to calculate total spend: ${error.message}`);
-  }
-};
-
-const getPotentialSavings = async () => {
-  try {
-    const query = `
-      SELECT COALESCE(SUM(software.price_per_seat), 0) as potential_savings
-      FROM licenses
-      JOIN software ON licenses.software_id = software.id
-      WHERE licenses.status = 'idle'
-    `;
-    const result = await pool.query(query);
-    return { potentialSavings: parseFloat(result.rows[0].potential_savings).toFixed(2) };
-  } catch (error) {
-    throw new Error(`Failed to calculate potential savings: ${error.message}`);
-  }
-};
-
-const getActiveLicenseCount = async () => {
-  try {
-    const query = `
-      SELECT COUNT(*) as active_count
-      FROM licenses
-      WHERE licenses.status = 'active'
-    `;
-    const result = await pool.query(query);
-    return { activeLicenses: parseInt(result.rows[0].active_count, 10) };
-  } catch (error) {
-    throw new Error(`Failed to get active license count: ${error.message}`);
-  }
-};
-
+const getTotalSpend = async () => ({ totalSpend: (await licenseService.metrics()).totalSpend });
+const getPotentialSavings = async () => ({ potentialSavings: (await licenseService.metrics()).potentialSavings });
+const getActiveLicenseCount = async () => ({ activeLicenses: (await licenseService.metrics()).activeLicenseCount });
 const getIdleUsers = async () => {
-  try {
-    const usersQuery = `
-      SELECT DISTINCT employees.id, employees.name, employees.email
-      FROM employees
-      JOIN licenses ON employees.id = licenses.employee_id
-      WHERE licenses.status = 'idle'
-      ORDER BY employees.id ASC
-    `;
-    const usersResult = await pool.query(usersQuery);
-    const idleUsers = [];
-
-    for (const user of usersResult.rows) {
-      const licensesQuery = `
-        SELECT licenses.id, licenses.software_id, software.name as software_name, licenses.last_active_date
-        FROM licenses
-        JOIN software ON licenses.software_id = software.id
-        WHERE licenses.employee_id = $1 AND licenses.status = 'idle'
-      `;
-      const licensesResult = await pool.query(licensesQuery, [user.id]);
-      
-      idleUsers.push({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        idleCount: licensesResult.rows.length,
-        idleLicenses: licensesResult.rows.map(l => ({
-          softwareId: l.software_id,
-          softwareName: l.software_name,
-          lastActiveDate: l.last_active_date,
-        })),
-      });
-    }
-
-    return { idleUsers };
-  } catch (error) {
-    throw new Error(`Failed to get idle users: ${error.message}`);
-  }
+  const { rows } = await pool.query(`SELECT employees.id, employees.name, employees.email,
+      COUNT(licenses.id)::int AS "idleCount",
+      json_agg(json_build_object('softwareId', software.id, 'softwareName', software.name,
+        'lastActiveDate', licenses.last_active_date) ORDER BY licenses.id) AS "idleLicenses"
+    FROM licenses JOIN employees ON employees.id = licenses.employee_id
+      JOIN software ON software.id = licenses.software_id
+    WHERE ${effectiveStatus} = 'idle'
+    GROUP BY employees.id ORDER BY employees.id`);
+  return { idleUsers: rows };
 };
-
 const getDashboardData = async () => {
-  try {
-    // First, update idle status for any active licenses that should be marked idle
-    const allLicenses = await pool.query(`
-      SELECT id, last_active_date FROM licenses WHERE status = 'active'
-    `);
-
-    for (const license of allLicenses.rows) {
-      const idleStatus = LicenseModel.checkIfIdle(license.last_active_date);
-      if (idleStatus === 'idle') {
-        await pool.query('UPDATE licenses SET status = $1 WHERE id = $2', ['idle', license.id]);
-      }
-    }
-
-    // Fetch all analytics in parallel
-    const [spend, savings, count, users] = await Promise.all([
-      getTotalSpend(),
-      getPotentialSavings(),
-      getActiveLicenseCount(),
-      getIdleUsers(),
-    ]);
-
-    // Extract calculated values
-    const totalSpend = parseFloat(spend.totalSpend);
-    const potentialSavings = parseFloat(savings.potentialSavings);
-    const activeLicenses = count.activeLicenses;
-    const idleUsers = users.idleUsers;
-
-    // Return clean analytics object with calculated values
-    return {
-      totalSpend,
-      potentialSavings,
-      idleUsers,
-      activeLicenses,
-    };
-  } catch (error) {
-    throw new Error(`Failed to get dashboard data: ${error.message}`);
-  }
+  const [m, { idleUsers }] = await Promise.all([licenseService.metrics(), getIdleUsers()]);
+  return { totalSpend: m.totalSpend, potentialSavings: m.potentialSavings,
+    activeLicenses: m.activeLicenseCount, idleLicenseCount: m.idleLicenseCount,
+    prunedLicenseCount: m.prunedLicenseCount, savingsPercentage: m.savingsPercentage,
+    spendingByCategory: m.spendingByCategory, idleUsers };
 };
-
 const getLicenseSummary = async () => {
-  try {
-    const query = `
-      SELECT status, COUNT(*) as count
-      FROM licenses
-      GROUP BY status
-    `;
-    const result = await pool.query(query);
-    const summary = { active: 0, idle: 0, pruned: 0 };
-    
-    result.rows.forEach(row => {
-      if (row.status in summary) {
-        summary[row.status] = parseInt(row.count, 10);
-      }
-    });
-
-    return summary;
-  } catch (error) {
-    throw new Error(`Failed to get license summary: ${error.message}`);
-  }
+  const m = await licenseService.metrics();
+  return { active: m.activeLicenseCount, idle: m.idleLicenseCount, pruned: m.prunedLicenseCount };
 };
-
-export default {
-  getTotalSpend,
-  getPotentialSavings,
-  getActiveLicenseCount,
-  getIdleUsers,
-  getDashboardData,
-  getLicenseSummary,
-};
+export default { getTotalSpend, getPotentialSavings, getActiveLicenseCount,
+  getIdleUsers, getDashboardData, getLicenseSummary };

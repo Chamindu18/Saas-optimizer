@@ -101,7 +101,7 @@ export const licenseAPI = {
   assignLicense: async (employeeId, softwareId) => unwrap(await api.post('/licenses', { employee_id: employeeId, software_id: softwareId })),
   updateLicense: async (id, data) => unwrap(await api.put(`/licenses/${id}`, data)),
   deleteLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
-  revokeLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
+  revokeLicense: async (id) => unwrap(await api.post(`/licenses/${id}/prune`)),
   pruneLicense: async (id) => unwrap(await api.post(`/licenses/${id}/prune`)),
 };
 

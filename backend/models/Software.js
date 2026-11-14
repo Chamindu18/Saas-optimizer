@@ -8,7 +8,7 @@
  * - id: Unique identifier (auto-increment from database)
  * - name: Software name (e.g., Slack, Zoom, Adobe)
  * - category: Category (e.g., Dev, Design, Marketing)
- * - price_per_seat: Cost per license (monthly or yearly)
+ * - price_per_seat: Estimated monthly recurring cost per assigned seat
  */
 
 import pool from '../config/db.js';

@@ -8,6 +8,7 @@
 import app from './app.js';
 import cron from 'node-cron';
 import pool from './config/db.js';
+import licenseService from './services/licenseService.js';
 
 const PORT = process.env.PORT || 5000;
 
@@ -18,29 +19,15 @@ const PORT = process.env.PORT || 5000;
 /**
  * Daily idle license check
  * Runs every day at midnight (00:00)
- * Flags licenses with no activity for 30+ days as 'idle'
+ * Reconciles stored status with the same last-activity rule used by reads.
  */
 cron.schedule('0 0 * * *', async () => {
   console.log('[CRON] Starting idle license check...');
   let flaggedCount = 0;
 
   try {
-    // Flag any license with last activity 30+ days ago
-    // (In a real app, you'd track last_login in activity_logs)
-    // For now, we'll just check if status is already set
-    const result = await pool.query(`
-      UPDATE licenses
-      SET status = 'idle'
-      WHERE status = 'active'
-        AND id IN (
-          SELECT id FROM licenses
-          WHERE created_at < NOW() - INTERVAL '30 days'
-          LIMIT 10  -- Safe limit to avoid huge updates
-        )
-      RETURNING id
-    `);
-
-    flaggedCount = result.rowCount || 0;
+    // One conditional statement handles all changed non-pruned rows.
+    flaggedCount = await licenseService.reconcileIdleStatuses();
 
     // Write success to system_health
     await pool.query(

@@ -6,6 +6,7 @@
  */
 
 import softwareService from '../services/softwareService.js';
+import respondError from '../utils/respondError.js';
 
 /**
  * GET /api/software
@@ -82,10 +83,7 @@ const createSoftware = async (req, res) => {
       data: newSoftware,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
@@ -144,6 +142,7 @@ const deleteSoftware = async (req, res) => {
       data: deletedSoftware,
     });
   } catch (error) {
+    if (error.status) return respondError(res, error);
     if (error.message.includes('not found')) {
       return res.status(404).json({
         success: false,

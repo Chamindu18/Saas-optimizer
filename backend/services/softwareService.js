@@ -10,6 +10,10 @@
  */
 
 import SoftwareModel from '../models/Software.js';
+import { validId, httpError } from './licenseRules.js';
+
+const validPrice = (value) => (typeof value === 'string' || typeof value === 'number') &&
+  /^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(String(value));
 
 /**
  * Get all software
@@ -55,13 +59,12 @@ const createSoftware = async (softwareData) => {
       throw new Error('Name, category, and price per seat are required');
     }
 
-    if (softwareData.price_per_seat < 0) {
-      throw new Error('Price per seat cannot be negative');
-    }
+    if (!validPrice(softwareData.price_per_seat)) throw httpError(400, 'Price must be a nonnegative monthly amount with at most two decimals');
 
     const newSoftware = await SoftwareModel.createSoftware(softwareData);
     return newSoftware;
   } catch (error) {
+    if (error.status) throw error;
     throw new Error(`Failed to create software: ${error.message}`);
   }
 };
@@ -73,9 +76,9 @@ const createSoftware = async (softwareData) => {
  */
 const updateSoftware = async (softwareId, softwareData) => {
   try {
-    if (!softwareId) {
-      throw new Error('Software ID is required');
-    }
+    if (!validId(softwareId)) throw httpError(400, 'Valid software ID required');
+    if (softwareData.price_per_seat !== undefined && !validPrice(softwareData.price_per_seat))
+      throw httpError(400, 'Price must be a nonnegative monthly amount with at most two decimals');
 
     // Check if software exists (must await the Promise!)
     const software = await SoftwareModel.getSoftwareById(Number(softwareId));
@@ -86,6 +89,7 @@ const updateSoftware = async (softwareId, softwareData) => {
     const updatedSoftware = await SoftwareModel.updateSoftware(Number(softwareId), softwareData);
     return updatedSoftware;
   } catch (error) {
+    if (error.status) throw error;
     throw new Error(`Failed to update software: ${error.message}`);
   }
 };
@@ -97,9 +101,7 @@ const updateSoftware = async (softwareId, softwareData) => {
  */
 const deleteSoftware = async (softwareId) => {
   try {
-    if (!softwareId) {
-      throw new Error('Software ID is required');
-    }
+    if (!validId(softwareId)) throw httpError(400, 'Valid software ID required');
 
     // Check if software exists before deleting (must await the Promise!)
     const software = await SoftwareModel.getSoftwareById(Number(softwareId));
@@ -110,6 +112,9 @@ const deleteSoftware = async (softwareId) => {
     const deletedSoftware = await SoftwareModel.deleteSoftware(Number(softwareId));
     return deletedSoftware;
   } catch (error) {
+    if (error.code === '23503' || error.code === '23001')
+      throw httpError(409, 'Software has license history and cannot be deleted');
+    if (error.status) throw error;
     throw new Error(`Failed to delete software: ${error.message}`);
   }
 };

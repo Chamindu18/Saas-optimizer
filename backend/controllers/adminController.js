@@ -12,6 +12,7 @@
 
 import pool from '../config/db.js';
 import userController from './userController.js';
+import licenseService from '../services/licenseService.js';
 
 /**
  * GET /api/admin/stats
@@ -39,10 +40,8 @@ const getAdminStats = async (req, res) => {
     }
 
     // Count idle licenses
-    const idleResult = await pool.query(
-      `SELECT COUNT(*) as count FROM licenses WHERE status = 'idle'`
-    );
-    const idleLicenses = parseInt(idleResult.rows[0].count, 10);
+    const licenseMetrics = await licenseService.metrics();
+    const idleLicenses = licenseMetrics.idleLicenseCount;
 
     // Count pruned licenses this month
     const prunedThisMonthResult = await pool.query(
@@ -52,28 +51,9 @@ const getAdminStats = async (req, res) => {
     );
     const licensesPrunedThisMonth = parseInt(prunedThisMonthResult.rows[0].count, 10);
 
-    // Calculate potential savings (sum of costs for idle licenses)
-    const savingsResult = await pool.query(
-      `SELECT COALESCE(SUM(software.price_per_seat), 0) as savings
-       FROM licenses 
-       JOIN software ON licenses.software_id = software.id
-       WHERE licenses.status = 'idle'`
-    );
-    const potentialSavings = parseFloat(savingsResult.rows[0].savings);
-
-    // Calculate total monthly spend (active licenses)
-    const spendResult = await pool.query(
-      `SELECT COALESCE(SUM(software.price_per_seat), 0) as total
-       FROM licenses
-       JOIN software ON licenses.software_id = software.id
-       WHERE licenses.status = 'active'`
-    );
-    const totalMonthlySpend = parseFloat(spendResult.rows[0].total);
-
-    // Calculate percent wasted
-    const percentWasted = totalMonthlySpend > 0
-      ? parseFloat(((potentialSavings / totalMonthlySpend) * 100).toFixed(2))
-      : 0;
+    const potentialSavings = licenseMetrics.potentialSavings;
+    const totalMonthlySpend = licenseMetrics.totalSpend;
+    const percentWasted = licenseMetrics.savingsPercentage;
 
     // Get latest system health check
     const healthResult = await pool.query(
@@ -91,9 +71,10 @@ const getAdminStats = async (req, res) => {
         roleBreakdown,
         idleLicenses,
         licensesPrunedThisMonth,
-        savingsRealized: parseFloat(potentialSavings.toFixed(2)),
-        totalMonthlySpend: parseFloat(totalMonthlySpend.toFixed(2)),
+        potentialSavings,
+        totalMonthlySpend,
         percentWasted,
+        spendingByCategory: licenseMetrics.spendingByCategory,
         lastHealthCheck,
         auditLogCount: await getAuditLogCount(),
       },

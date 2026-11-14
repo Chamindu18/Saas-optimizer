@@ -46,7 +46,6 @@ export const logout = () => {
   try {
     localStorage.removeItem('auth_token');
     localStorage.removeItem('user');
-    window.location.href = '/login';
   } catch (error) {
     console.error('Error logging out:', error);
   }

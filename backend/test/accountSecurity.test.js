@@ -128,6 +128,15 @@ test('login succeeds and returns a token without a password hash', async () => {
   noHash(result);
 });
 
+test('session restoration returns the current database role without sensitive fields', async () => {
+  const staleToken = token(2, 'manager');
+  users.get(2).role = 'viewer';
+  const result = await request('GET', '/api/auth/me', 2, undefined, staleToken);
+  assert.equal(result.status, 200);
+  assert.equal(result.body.data.role, 'viewer');
+  noHash(result);
+});
+
 test('public registration creates only a viewer and exposes no hash', async () => {
   const result = await request('POST', '/api/auth/register', null,
     { name: 'Registrant', email: 'registrant@test.invalid', password: 'password123', role: 'admin' });

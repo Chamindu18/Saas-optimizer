@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useAsync } from '../hooks/useAsync';
 import { useForm } from '../hooks/useForm';
-import { licenseAPI, employeeAPI, softwareAPI } from '../services/api';
+import { licenseAPI, employeeAPI, softwareAPI, apiErrorMessage } from '../services/api';
 import { useRole } from '../hooks/useRole';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -21,15 +21,17 @@ import './ManagementPages.css';
 function LicensesPage() {
   const { isManager, isAdmin } = useRole();
   const [showModal, setShowModal] = useState(false);
+  const [showIdle, setShowIdle] = useState(false);
   const [error, setError] = useState(null);
 
-  const { data: licenses, isLoading, execute: refetch } = useAsync(
+  const { data: licenses, isLoading, error: fetchError, execute: refetch } = useAsync(
     () => licenseAPI.getAllLicenses(),
     true
   );
 
-  const { data: employees } = useAsync(() => employeeAPI.getAll(), true);
-  const { data: software } = useAsync(() => softwareAPI.getAllSoftware(), true);
+  const { data: employees, error: employeesError, isLoading: employeesLoading } = useAsync(() => employeeAPI.getAll(), true);
+  const { data: software, error: softwareError, isLoading: softwareLoading } = useAsync(() => softwareAPI.getAllSoftware(), true);
+  const { data: idleLicenses, error: idleError, isLoading: idleLoading, execute: refetchIdle } = useAsync(licenseAPI.getIdleLicenses, showIdle);
 
   const validate = (values) => {
     const errors = {};
@@ -45,23 +47,35 @@ function LicensesPage() {
         await licenseAPI.assignLicense(values.employee_id, values.software_id);
         setShowModal(false);
         form.reset();
-        refetch();
+        await refetch();
+        if (showIdle) await refetchIdle();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     },
     validate
   );
 
-  const handleRevoke = async (id) => {
-    if (window.confirm('Revoke this license?')) {
+  const handlePrune = async (id) => {
+    if (window.confirm('Prune this license? The assignment will remain in history.')) {
       try {
-        await licenseAPI.revokeLicense(id);
-        refetch();
+        await licenseAPI.pruneLicense(id);
+        await refetch();
+        if (showIdle) await refetchIdle();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     }
+  };
+
+  const handleReactivate = async (id) => {
+    const lastActiveDate = window.prompt('Enter the verified last activity timestamp (ISO 8601, within 30 days):');
+    if (!lastActiveDate) return;
+    try {
+      await licenseAPI.reactivateLicense(id, lastActiveDate);
+      await refetch();
+      if (showIdle) await refetchIdle();
+    } catch (err) { setError(apiErrorMessage(err)); }
   };
 
   if (isLoading) return <Spinner text="Loading licenses..." />;
@@ -71,16 +85,18 @@ function LicensesPage() {
       <div className="management-header">
         <h1>Licenses</h1>
         {isManager && <Button onClick={() => setShowModal(true)}>Assign License</Button>}
+        <Button variant="secondary" onClick={() => setShowIdle(value => !value)}>{showIdle ? 'All Licenses' : 'Idle Licenses'}</Button>
       </div>
 
-      {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
+      {(error || fetchError || employeesError || softwareError || idleError) && <ErrorMessage message={error || apiErrorMessage(fetchError || employeesError || softwareError || idleError)} onDismiss={() => setError(null)} />}
+      {showIdle && idleLoading && <Spinner text="Loading idle licenses..." />}
 
       <Card>
         <Table
           columns={[
             { key: 'id', label: 'ID' },
-            { key: 'employee_id', label: 'Employee ID' },
-            { key: 'software_id', label: 'Software ID' },
+            { key: 'employeeName', label: 'Employee' },
+            { key: 'softwareName', label: 'Software' },
             {
               key: 'status',
               label: 'Status',
@@ -105,13 +121,13 @@ function LicensesPage() {
               key: 'actions',
               label: 'Actions',
               render: (_, row) => (
-                <Button variant="ghost" size="sm" onClick={() => handleRevoke(row.id)}>
-                  Revoke
-                </Button>
+                row.status === 'pruned' ?
+                  <Button variant="ghost" size="sm" onClick={() => handleReactivate(row.id)}>Reactivate</Button> :
+                  <Button variant="ghost" size="sm" onClick={() => handlePrune(row.id)}>Prune</Button>
               ),
             }] : []),
           ]}
-          data={licenses || []}
+          data={(showIdle ? idleLicenses : licenses) || []}
         />
       </Card>
 
@@ -123,10 +139,11 @@ function LicensesPage() {
         size="md"
         actions={
           <div className="modal-actions">
+            {(employeesLoading || softwareLoading) && <span>Loading options...</span>}
             <Button variant="secondary" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit" form="license-form" loading={form.isSubmitting}>
+            <Button type="submit" form="license-form" loading={form.isSubmitting} disabled={employeesLoading || softwareLoading || !employees?.length || !software?.length}>
               Assign License
             </Button>
           </div>

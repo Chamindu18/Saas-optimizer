@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRole } from '../../hooks/useRole';
-import { getUser, logout } from '../../utils/auth';
+import { useAuth } from '../../context/AuthContext';
 import '../styles/Sidebar.css';
 
 // SVG Icons (inline for simplicity)
@@ -71,11 +71,11 @@ const IconLogout = () => (
 export default function Sidebar() {
   const navigate = useNavigate();
   const { role } = useRole();
-
-  const user = getUser() || { email: 'User' };
+  const { user, logout } = useAuth();
 
   const handleLogout = () => {
     logout();
+    navigate('/login', { replace: true });
   };
 
   const navItems = [
@@ -198,12 +198,12 @@ export default function Sidebar() {
       {/* User Section */}
       <div className="sidebar-user-card">
         <div className="user-avatar">
-          {user.email
+          {user?.email
             ? user.email.split('@')[0].substring(0, 2).toUpperCase()
             : 'U'}
         </div>
         <div className="user-info">
-          <div className="user-name">{user.email || 'User'}</div>
+          <div className="user-name">{user?.email || 'User'}</div>
           <span className={`role-badge role-badge--${role}`}>{role}</span>
         </div>
         <button className="user-logout" onClick={handleLogout} title="Sign out">

@@ -7,6 +7,7 @@ jest.mock('./pages/DashboardPage', () => () => <h1>Dashboard route</h1>);
 jest.mock('./services/api', () => ({
   __esModule: true,
   default: { get: jest.fn(() => Promise.reject(new Error('Unexpected API request'))) },
+  authAPI: { me: jest.fn(async () => ({ id: 1, name: 'Test User', email: 'test@example.com', role: 'viewer' })) },
 }));
 
 beforeEach(() => {
@@ -35,4 +36,23 @@ test('renders the protected dashboard for a stored authenticated user', async ()
   expect(await screen.findByRole('heading', { name: 'Dashboard route' })).toBeInTheDocument();
   expect(window.location.pathname).toBe('/dashboard');
   expect(screen.queryByRole('heading', { name: 'Login route' })).not.toBeInTheDocument();
+});
+
+test('rejects a stored token when session restoration fails', async () => {
+  const { authAPI } = require('./services/api');
+  authAPI.me.mockRejectedValueOnce(new Error('Expired token'));
+  window.localStorage.setItem('auth_token', 'expired');
+  window.history.pushState({}, '', '/dashboard');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Login route' })).toBeInTheDocument();
+  expect(window.localStorage.getItem('auth_token')).toBeNull();
+});
+
+test('viewer navigation hides admin controls and cannot open admin route', async () => {
+  window.localStorage.setItem('auth_token', 'viewer-token');
+  window.history.pushState({}, '', '/admin');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Dashboard route' })).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
+  expect(window.location.pathname).toBe('/dashboard');
 });

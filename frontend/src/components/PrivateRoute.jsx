@@ -8,7 +8,7 @@
 
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { isLoggedIn } from '../utils/auth';
+import { useAuth } from '../context/AuthContext';
 
 /**
  * Protected route wrapper
@@ -21,10 +21,12 @@ import { isLoggedIn } from '../utils/auth';
  * </PrivateRoute>
  */
 const PrivateRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return <div role="status">Restoring session...</div>;
   // Check if user has a valid token
-  if (!isLoggedIn()) {
+  if (!isAuthenticated) {
     // Redirect to login if not authenticated
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: { pathname: window.location.pathname } }} />;
   }
 
   // User is authenticated, render the component

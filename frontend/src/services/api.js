@@ -43,7 +43,7 @@ api.interceptors.response.use(
     // 401: Unauthorized (token expired or missing)
     if (error.response?.status === 401) {
       clearAuth();
-      window.location.href = '/login';
+      window.dispatchEvent(new Event('seatwatch:session-expired'));
     }
 
     // 403: Forbidden (user doesn't have permission)
@@ -70,6 +70,7 @@ const unwrap = (response) => response.data?.data ?? response.data;
 export const authAPI = {
   login: async (email, password) => unwrap(await api.post('/auth/login', { email, password })),
   register: async (name, email, password) => unwrap(await api.post('/auth/register', { name, email, password })),
+  me: async () => unwrap(await api.get('/auth/me')),
 };
 
 // Admin API
@@ -81,7 +82,7 @@ export const adminAPI = {
     if (action) {
       params.action = action;
     }
-    return unwrap(await api.get('/admin/audit-logs', { params }));
+    return (await api.get('/admin/audit-logs', { params })).data;
   },
   getSystemHealth: async () => unwrap(await api.get('/admin/system-health')),
   getStats: async () => unwrap(await api.get('/admin/stats')),
@@ -103,7 +104,11 @@ export const licenseAPI = {
   deleteLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
   revokeLicense: async (id) => unwrap(await api.post(`/licenses/${id}/prune`)),
   pruneLicense: async (id) => unwrap(await api.post(`/licenses/${id}/prune`)),
+  reactivateLicense: async (id, lastActiveDate) => unwrap(await api.put(`/licenses/${id}`, { status: 'active', last_active_date: lastActiveDate })),
+  getIdleLicenses: async () => unwrap(await api.get('/licenses/idle/list')),
 };
+
+export const apiErrorMessage = (error) => error.response?.data?.message || error.response?.data?.error || error.message || 'Request failed';
 
 // Software API
 export const softwareAPI = {

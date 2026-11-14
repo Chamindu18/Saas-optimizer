@@ -201,7 +201,18 @@ const login = async (req, res) => {
   }
 };
 
+const me = async (req, res) => {
+  try {
+    const { rows } = await pool.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.user.id]);
+    if (!rows[0]) return res.status(401).json({ success: false, error: 'Account no longer exists' });
+    return res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: 'Failed to load account' });
+  }
+};
+
 export default {
   register,
   login,
+  me,
 };

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { useAsync } from '../hooks/useAsync';
 import { useForm } from '../hooks/useForm';
-import { employeeAPI } from '../services/api';
+import { employeeAPI, apiErrorMessage } from '../services/api';
 import { useRole } from '../hooks/useRole';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
@@ -51,21 +51,21 @@ function UsersPage() {
         }
         setShowModal(false);
         setEditingUser(null);
-        refetch();
+        await refetch();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     },
     validate
   );
 
   const handleDelete = async (userId) => {
-    if (window.confirm('Are you sure you want to delete this user?')) {
+    if (window.confirm('Delete this employee? Employees with license history cannot be deleted.')) {
       try {
         await employeeAPI.remove(userId);
-        refetch();
+        await refetch();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     }
   };
@@ -76,7 +76,8 @@ function UsersPage() {
       form.setFieldValue('name', user.name);
       form.setFieldValue('email', user.email);
     } else {
-      form.reset();
+      form.setFieldValue('name', '');
+      form.setFieldValue('email', '');
     }
     setShowModal(true);
   };

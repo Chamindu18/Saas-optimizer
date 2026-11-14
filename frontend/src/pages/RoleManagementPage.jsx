@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
 import Card from '../components/ui/Card';
-import { getUser } from '../utils/auth';
+import { useAuth } from '../context/AuthContext';
+import { apiErrorMessage } from '../services/api';
 import '../pages/styles/RoleManagementPage.css';
 
 /**
@@ -19,6 +20,7 @@ const RoleManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentUserId, setCurrentUserId] = useState(null);
+  const { user: currentUser } = useAuth();
   const [editingRole, setEditingRole] = useState(null);
   const [newRole, setNewRole] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState(null);
@@ -27,11 +29,10 @@ const RoleManagementPage = () => {
     fetchUsers();
     
     // Get current user ID from token
-    const currentUser = getUser();
     if (currentUser) {
       setCurrentUserId(currentUser.id || null);
     }
-  }, []);
+  }, [currentUser]);
 
   const fetchUsers = async () => {
     try {
@@ -40,7 +41,7 @@ const RoleManagementPage = () => {
       setUsers(usersResponse || []);
       setError(null);
     } catch (err) {
-      setError(err.message || 'Failed to load users');
+      setError(apiErrorMessage(err));
       console.error('Fetch users error:', err);
     } finally {
       setLoading(false);
@@ -97,7 +98,7 @@ const RoleManagementPage = () => {
       setUsers(users.map(u => 
         u.id === user.id ? { ...u, role: oldRole } : u
       ));
-      alert(`Failed to change role: ${err.message}`);
+      setError(apiErrorMessage(err));
     }
   };
 

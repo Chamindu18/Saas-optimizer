@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { useAsync } from '../hooks/useAsync';
 import { useForm } from '../hooks/useForm';
-import { softwareAPI } from '../services/api';
+import { softwareAPI, apiErrorMessage } from '../services/api';
+import { useRole } from '../hooks/useRole';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
@@ -18,6 +19,7 @@ import { formatCurrency } from '../utils/formatters';
 import './ManagementPages.css';
 
 function SoftwarePage() {
+  const { isManager, isAdmin } = useRole();
   const [showModal, setShowModal] = useState(false);
   const [editingSoftware, setEditingSoftware] = useState(null);
   const [error, setError] = useState(null);
@@ -31,8 +33,8 @@ function SoftwarePage() {
     const errors = {};
     if (!values.name) errors.name = 'Name is required';
     if (!values.category) errors.category = 'Category is required';
-    if (!values.price_per_seat) errors.price_per_seat = 'Price is required';
-    else if (isNaN(values.price_per_seat)) errors.price_per_seat = 'Must be a number';
+    if (values.price_per_seat === '') errors.price_per_seat = 'Price is required';
+    else if (!/^(?:0|[1-9]\d{0,7})(?:\.\d{1,2})?$/.test(String(values.price_per_seat))) errors.price_per_seat = 'Enter a nonnegative monthly price with at most two decimals';
     return errors;
   };
 
@@ -51,9 +53,9 @@ function SoftwarePage() {
         }
         setShowModal(false);
         setEditingSoftware(null);
-        refetch();
+        await refetch();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     },
     validate
@@ -63,9 +65,9 @@ function SoftwarePage() {
     if (window.confirm('Delete this software?')) {
       try {
         await softwareAPI.deleteSoftware(id);
-        refetch();
+        await refetch();
       } catch (err) {
-        setError(err.message);
+        setError(apiErrorMessage(err));
       }
     }
   };
@@ -77,7 +79,9 @@ function SoftwarePage() {
       form.setFieldValue('category', item.category);
       form.setFieldValue('price_per_seat', item.price_per_seat);
     } else {
-      form.reset();
+      form.setFieldValue('name', '');
+      form.setFieldValue('category', '');
+      form.setFieldValue('price_per_seat', '');
     }
     setShowModal(true);
   };
@@ -88,7 +92,7 @@ function SoftwarePage() {
     <div className="management-page">
       <div className="management-header">
         <h1>Software & Subscriptions</h1>
-        <Button onClick={() => openModal()}>Add Software</Button>
+        {isManager && <Button onClick={() => openModal()}>Add Software</Button>}
       </div>
 
       {(error || fetchError) && (
@@ -106,7 +110,7 @@ function SoftwarePage() {
               label: 'Price/Seat',
               render: (price) => formatCurrency(price),
             },
-            {
+            ...(isManager ? [{
               key: 'actions',
               label: 'Actions',
               render: (_, row) => (
@@ -114,12 +118,12 @@ function SoftwarePage() {
                   <Button variant="ghost" size="sm" onClick={() => openModal(row)}>
                     Edit
                   </Button>
-                  <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id)}>
+                  {isAdmin && <Button variant="ghost" size="sm" onClick={() => handleDelete(row.id)}>
                     Delete
-                  </Button>
+                  </Button>}
                 </div>
               ),
-            },
+            }] : []),
           ]}
           data={software || []}
         />
@@ -167,6 +171,7 @@ function SoftwarePage() {
             name="price_per_seat"
             placeholder="99.99"
             step="0.01"
+            min="0"
             value={form.values.price_per_seat}
             onChange={form.handleChange}
             error={form.touched.price_per_seat ? form.errors.price_per_seat : null}

@@ -146,7 +146,7 @@ export default function HomePage() {
         <div className="stat-divider"></div>
         <div className="stat">
           <div className="stat-value">{stats.totalLicenses.toLocaleString()}</div>
-          <div className="stat-label">Active licenses recorded</div>
+          <div className="stat-label">Licenses recorded</div>
         </div>
         <div className="stat-divider"></div>
         <div className="stat">
@@ -269,7 +269,7 @@ export default function HomePage() {
               <span className="amount">0</span>
               <span className="period">/mo</span>
             </div>
-            <Button variant="ghost" block>
+            <Button variant="ghost" block onClick={() => navigate('/register')}>
               Get Started
             </Button>
             <div className="pricing-features">
@@ -289,7 +289,7 @@ export default function HomePage() {
               <span className="amount">299</span>
               <span className="period">/mo</span>
             </div>
-            <Button variant="primary" block>
+            <Button variant="primary" block onClick={() => navigate('/register')}>
               Start Free Trial
             </Button>
             <div className="pricing-features">

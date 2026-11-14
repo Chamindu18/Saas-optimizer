@@ -1,11 +1,4 @@
-import { getToken } from '../utils/auth';
-
-const decodeTokenPayload = (token) => {
-  const base64Url = token.split('.')[1] || '';
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
-  return JSON.parse(atob(padded));
-};
+import { useAuth } from '../context/AuthContext';
 
 /**
  * useRole Hook
@@ -21,10 +14,11 @@ const decodeTokenPayload = (token) => {
  * - can: Function(action) - checks if user can perform specific action
  */
 export const useRole = () => {
-  const token = getToken();
+  const { user } = useAuth();
+  const role = user?.role;
 
   // If no token, return default (not authenticated)
-  if (!token) {
+  if (!role) {
     return {
       role: null,
       isAdmin: false,
@@ -35,11 +29,6 @@ export const useRole = () => {
   }
 
   try {
-    // JWT format: header.payload.signature
-    // Payload is base64url encoded JSON in the middle
-    const payload = decodeTokenPayload(token);
-    const role = payload.role || 'viewer';
-
     return {
       role,
       isAdmin: role === 'admin',

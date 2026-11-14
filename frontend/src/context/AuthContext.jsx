@@ -12,7 +12,7 @@
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { authAPI } from '../services/api';
-import { clearAuth, getToken, getUser, setToken, setUser as saveUser } from '../utils/auth';
+import { clearAuth, getToken, setToken, setUser as saveUser } from '../utils/auth';
 
 // Create context
 const AuthContext = createContext(null);
@@ -30,28 +30,30 @@ export function AuthProvider({ children }) {
   /**
    * Initialize authentication from localStorage
    */
-  const initializeAuth = useCallback(() => {
-    try {
-      const token = getToken();
-      const userData = getUser();
-
-      if (token && userData) {
-        setUser(userData);
-        setIsAuthenticated(true);
-      }
-    } catch (err) {
-      console.error('Error initializing auth:', err);
-      // Clear corrupted data
-      clearAuth();
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Initialize auth from localStorage on mount
   useEffect(() => {
-    initializeAuth();
-  }, [initializeAuth]);
+    let active = true;
+    const restore = async (initial = false) => {
+      if (!getToken()) { if (initial) setLoading(false); return; }
+      try {
+        const currentUser = await authAPI.me();
+        if (active) {
+          saveUser(currentUser);
+          setUser(currentUser);
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        if (active) { clearAuth(); setUser(null); setIsAuthenticated(false); }
+      } finally {
+        if (active && initial) setLoading(false);
+      }
+    };
+    restore(true);
+    const expire = () => { setUser(null); setIsAuthenticated(false); };
+    const refreshOnFocus = () => { if (document.visibilityState === 'visible') void restore(); };
+    window.addEventListener('seatwatch:session-expired', expire);
+    window.addEventListener('focus', refreshOnFocus);
+    return () => { active = false; window.removeEventListener('seatwatch:session-expired', expire); window.removeEventListener('focus', refreshOnFocus); };
+  }, []);
 
   /**
    * Login user

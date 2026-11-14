@@ -22,8 +22,8 @@ const router = express.Router();
 // Apply auth middleware to all routes in this router
 router.use(authMiddleware);
 
-// Admins manage accounts; managers need a read-only directory for assignment.
-router.get('/', requireRole('admin', 'manager'), userController.getUsers);
+// Account directory is for administrators; license assignment uses employees.
+router.get('/', requireRole('admin'), userController.getUsers);
 
 // Get user by ID
 router.get('/:id', userController.getUserById);

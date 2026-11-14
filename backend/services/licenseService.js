@@ -11,7 +11,7 @@
 
 import LicenseModel from '../models/License.js';
 import SoftwareModel from '../models/Software.js';
-import UserModel from '../models/User.js';
+import { getEmployee } from '../models/Employee.js';
 
 /**
  * Get all licenses
@@ -35,7 +35,7 @@ const getAllLicenses = async () => {
         // If status changed from active to idle, update the database
         if (calculatedStatus === 'idle') {
           await LicenseModel.updateLicense(license.id, {
-            user_id: license.user_id,
+            employee_id: license.employee_id,
             software_id: license.software_id,
             assigned_date: license.assigned_date,
             last_active_date: license.last_active_date,
@@ -78,7 +78,7 @@ const getLicenseById = async (licenseId) => {
       // If status changed from active to idle, update the database
       if (calculatedStatus === 'idle') {
         await LicenseModel.updateLicense(Number(licenseId), {
-          user_id: license.user_id,
+          employee_id: license.employee_id,
           software_id: license.software_id,
           assigned_date: license.assigned_date,
           last_active_date: license.last_active_date,
@@ -101,29 +101,32 @@ const getLicenseById = async (licenseId) => {
  * CRITICAL FIX: Added 'await' to resolve Promises from Model calls
  */
 const assignLicense = async (licenseData) => {
-  try {
-    // Validation
-    if (!licenseData.user_id || !licenseData.software_id) {
-      throw new Error('User ID and Software ID are required');
+    if (!Number.isSafeInteger(Number(licenseData.employee_id)) || Number(licenseData.employee_id) < 1 ||
+        !Number.isSafeInteger(Number(licenseData.software_id)) || Number(licenseData.software_id) < 1) {
+      const error = new Error('Valid employee and software IDs are required');
+      error.status = 400;
+      throw error;
     }
 
-    // Check if user exists (must await!)
-    const user = await UserModel.getUserById(Number(licenseData.user_id));
-    if (!user) {
-      throw new Error('User not found');
+    const employee = await getEmployee(Number(licenseData.employee_id));
+    if (!employee) {
+      const error = new Error('Employee not found');
+      error.status = 404;
+      throw error;
     }
 
     // Check if software exists (must await!)
     const software = await SoftwareModel.getSoftwareById(Number(licenseData.software_id));
     if (!software) {
-      throw new Error('Software not found');
+      const error = new Error('Software not found');
+      error.status = 404;
+      throw error;
     }
 
-    const newLicense = await LicenseModel.createLicense(licenseData);
-    return newLicense;
-  } catch (error) {
-    throw new Error(`Failed to assign license: ${error.message}`);
-  }
+    return LicenseModel.createLicense({
+      employee_id: Number(licenseData.employee_id),
+      software_id: Number(licenseData.software_id),
+    });
 };
 
 /**
@@ -167,7 +170,7 @@ const pruneLicense = async (licenseId) => {
     }
 
     return await LicenseModel.updateLicense(Number(licenseId), { 
-      user_id: license.user_id,
+      employee_id: license.employee_id,
       software_id: license.software_id,
       assigned_date: license.assigned_date,
       last_active_date: license.last_active_date,

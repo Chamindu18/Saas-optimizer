@@ -7,6 +7,7 @@
 
 import licenseService from '../services/licenseService.js';
 import logAction from '../utils/auditLogger.js';
+import respondError from '../utils/respondError.js';
 
 /**
  * GET /api/licenses
@@ -58,20 +59,20 @@ const getLicenseById = async (req, res) => {
 
 /**
  * POST /api/licenses
- * Assign a license to a user
+ * Assign a license to an employee
  * 
  * Request body:
  * {
- *   "user_id": 1,
+ *   "employee_id": 1,
  *   "software_id": 2
  * }
  */
 const assignLicense = async (req, res) => {
   try {
-    const { user_id, software_id } = req.body;
+    const { employee_id, software_id } = req.body;
 
     const newLicense = await licenseService.assignLicense({
-      user_id,
+      employee_id,
       software_id,
     });
 
@@ -81,10 +82,10 @@ const assignLicense = async (req, res) => {
       data: newLicense,
     });
   } catch (error) {
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    if (error.code === '23505') {
+      return res.status(409).json({ success: false, error: 'License already assigned' });
+    }
+    return respondError(res, error);
   }
 };
 

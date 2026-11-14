@@ -53,11 +53,11 @@ const getActiveLicenseCount = async () => {
 const getIdleUsers = async () => {
   try {
     const usersQuery = `
-      SELECT DISTINCT users.id, users.name, users.email
-      FROM users
-      JOIN licenses ON users.id = licenses.user_id
+      SELECT DISTINCT employees.id, employees.name, employees.email
+      FROM employees
+      JOIN licenses ON employees.id = licenses.employee_id
       WHERE licenses.status = 'idle'
-      ORDER BY users.id ASC
+      ORDER BY employees.id ASC
     `;
     const usersResult = await pool.query(usersQuery);
     const idleUsers = [];
@@ -67,7 +67,7 @@ const getIdleUsers = async () => {
         SELECT licenses.id, licenses.software_id, software.name as software_name, licenses.last_active_date
         FROM licenses
         JOIN software ON licenses.software_id = software.id
-        WHERE licenses.user_id = $1 AND licenses.status = 'idle'
+        WHERE licenses.employee_id = $1 AND licenses.status = 'idle'
       `;
       const licensesResult = await pool.query(licensesQuery, [user.id]);
       

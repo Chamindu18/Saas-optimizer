@@ -78,9 +78,9 @@ function App() {
             }
           />
 
-          {/* Users Management */}
+          {/* Employee Management */}
           <Route
-            path="/users"
+            path="/employees"
             element={
               <PrivateRoute>
                 <ProtectedLayout>
@@ -91,6 +91,7 @@ function App() {
           />
 
           {/* Software Management */}
+          <Route path="/users" element={<Navigate to="/employees" replace />} />
           <Route
             path="/software"
             element={

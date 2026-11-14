@@ -6,7 +6,8 @@
 import React, { useState } from 'react';
 import { useAsync } from '../hooks/useAsync';
 import { useForm } from '../hooks/useForm';
-import { licenseAPI, userAPI, softwareAPI } from '../services/api';
+import { licenseAPI, employeeAPI, softwareAPI } from '../services/api';
+import { useRole } from '../hooks/useRole';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import Modal from '../components/common/Modal';
@@ -18,6 +19,7 @@ import { daysSinceDate, capitalize } from '../utils/formatters';
 import './ManagementPages.css';
 
 function LicensesPage() {
+  const { isManager, isAdmin } = useRole();
   const [showModal, setShowModal] = useState(false);
   const [error, setError] = useState(null);
 
@@ -26,21 +28,21 @@ function LicensesPage() {
     true
   );
 
-  const { data: users } = useAsync(() => userAPI.getAllUsers(), true);
+  const { data: employees } = useAsync(() => employeeAPI.getAll(), true);
   const { data: software } = useAsync(() => softwareAPI.getAllSoftware(), true);
 
   const validate = (values) => {
     const errors = {};
-    if (!values.user_id) errors.user_id = 'User is required';
+    if (!values.employee_id) errors.employee_id = 'Employee is required';
     if (!values.software_id) errors.software_id = 'Software is required';
     return errors;
   };
 
   const form = useForm(
-    { user_id: '', software_id: '' },
+    { employee_id: '', software_id: '' },
     async (values) => {
       try {
-        await licenseAPI.assignLicense(values.user_id, values.software_id);
+        await licenseAPI.assignLicense(values.employee_id, values.software_id);
         setShowModal(false);
         form.reset();
         refetch();
@@ -68,7 +70,7 @@ function LicensesPage() {
     <div className="management-page">
       <div className="management-header">
         <h1>Licenses</h1>
-        <Button onClick={() => setShowModal(true)}>Assign License</Button>
+        {isManager && <Button onClick={() => setShowModal(true)}>Assign License</Button>}
       </div>
 
       {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
@@ -77,7 +79,7 @@ function LicensesPage() {
         <Table
           columns={[
             { key: 'id', label: 'ID' },
-            { key: 'user_id', label: 'User ID' },
+            { key: 'employee_id', label: 'Employee ID' },
             { key: 'software_id', label: 'Software ID' },
             {
               key: 'status',
@@ -99,7 +101,7 @@ function LicensesPage() {
                 return `${days} days ago`;
               },
             },
-            {
+            ...(isAdmin ? [{
               key: 'actions',
               label: 'Actions',
               render: (_, row) => (
@@ -107,7 +109,7 @@ function LicensesPage() {
                   Revoke
                 </Button>
               ),
-            },
+            }] : []),
           ]}
           data={licenses || []}
         />
@@ -132,23 +134,23 @@ function LicensesPage() {
       >
         <form id="license-form" onSubmit={form.handleSubmit}>
           <div className="form-group">
-            <label htmlFor="user_id">User</label>
+            <label htmlFor="employee_id">Employee</label>
             <select
-              id="user_id"
-              name="user_id"
-              value={form.values.user_id}
+              id="employee_id"
+              name="employee_id"
+              value={form.values.employee_id}
               onChange={form.handleChange}
               className="form-select"
               required
             >
-              <option value="">Select a user...</option>
-              {users?.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.name} ({user.email})
+              <option value="">Select an employee...</option>
+              {employees?.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.name} ({employee.email})
                 </option>
               ))}
             </select>
-            {form.errors.user_id && <p style={{ color: 'var(--color-danger-600)' }}>{form.errors.user_id}</p>}
+            {form.errors.employee_id && <p style={{ color: 'var(--color-danger-600)' }}>{form.errors.employee_id}</p>}
           </div>
 
           <div className="form-group">

@@ -12,7 +12,7 @@ import logAction from '../utils/auditLogger.js';
 import respondError from '../utils/respondError.js';
 
 const validId = (value) => Number.isSafeInteger(Number(value)) && Number(value) > 0;
-const canRead = (actor, id) => actor.role === 'admin' || actor.role === 'manager' || Number(actor.id) === Number(id);
+const canRead = (actor, id) => actor.role === 'admin' || Number(actor.id) === Number(id);
 const canEdit = (actor, id) => actor.role === 'admin' || Number(actor.id) === Number(id);
 
 /**

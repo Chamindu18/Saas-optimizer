@@ -97,8 +97,8 @@ export const statsAPI = {
 export const licenseAPI = {
   getAllLicenses: async () => unwrap(await api.get('/licenses')),
   getLicenses: async () => unwrap(await api.get('/licenses')),
-  createLicense: async (userId, softwareId) => unwrap(await api.post('/licenses', { user_id: userId, software_id: softwareId })),
-  assignLicense: async (userId, softwareId) => unwrap(await api.post('/licenses', { user_id: userId, software_id: softwareId })),
+  createLicense: async (employeeId, softwareId) => unwrap(await api.post('/licenses', { employee_id: employeeId, software_id: softwareId })),
+  assignLicense: async (employeeId, softwareId) => unwrap(await api.post('/licenses', { employee_id: employeeId, software_id: softwareId })),
   updateLicense: async (id, data) => unwrap(await api.put(`/licenses/${id}`, data)),
   deleteLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
   revokeLicense: async (id) => unwrap(await api.delete(`/licenses/${id}`)),
@@ -114,15 +114,23 @@ export const softwareAPI = {
   deleteSoftware: async (id) => unwrap(await api.delete(`/software/${id}`)),
 };
 
-// User API
+// Account API
 export const userAPI = {
   getAllUsers: async () => unwrap(await api.get('/users')),
   getUsers: async () => unwrap(await api.get('/users')),
   getProfile: async () => unwrap(await api.get('/users/profile')),
   updateProfile: async (data) => unwrap(await api.put('/users/profile', data)),
-  createUser: async (name, email) => unwrap(await api.post('/users', { name, email })),
+  createAccount: async (name, email, password) => unwrap(await api.post('/users', { name, email, password })),
   updateUser: async (id, data) => unwrap(await api.put(`/users/${id}`, data)),
   deleteUser: async (id) => unwrap(await api.delete(`/users/${id}`)),
+};
+
+// Employee directory and license assignees have no login credentials.
+export const employeeAPI = {
+  getAll: async () => unwrap(await api.get('/employees')),
+  create: async (name, email) => unwrap(await api.post('/employees', { name, email })),
+  update: async (id, name, email) => unwrap(await api.put(`/employees/${id}`, { name, email })),
+  remove: async (id) => unwrap(await api.delete(`/employees/${id}`)),
 };
 
 export const dashboardAPI = {

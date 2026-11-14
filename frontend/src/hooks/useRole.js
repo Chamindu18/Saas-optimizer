@@ -63,7 +63,7 @@ export const useRole = () => {
 
           // Employee/User management
           addEmployee: ['admin', 'manager'],
-          deleteEmployee: ['admin'],
+          deleteEmployee: ['admin', 'manager'],
 
           // Dashboard access (all authenticated users)
           viewDashboard: ['admin', 'manager', 'viewer'],

@@ -14,11 +14,6 @@ ALTER TABLE users
 ALTER TABLE licenses
   ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 
--- Step 2: Set admin user role
--- ============================================
-UPDATE users SET role = 'admin'
-  WHERE email = 'admin@example.com';
-
 -- Step 3: Verify the data looks correct
 -- ============================================
 -- SELECT id, name, email, role, created_at FROM users ORDER BY created_at;

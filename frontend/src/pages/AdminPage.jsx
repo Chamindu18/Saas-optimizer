@@ -149,7 +149,7 @@ function AdminPage() {
             <Table
               columns={[
                 { key: 'id', label: 'ID' },
-                { key: 'user_id', label: 'User' },
+                { key: 'employee_id', label: 'Employee' },
                 { key: 'software_id', label: 'Software' },
                 {
                   key: 'status',
@@ -177,7 +177,7 @@ function AdminPage() {
               columns={[
                 { key: 'id', label: 'ID' },
                 { key: 'action', label: 'Action' },
-                { key: 'user_id', label: 'User ID' },
+                { key: 'employee_id', label: 'Employee ID' },
                 { key: 'resource', label: 'Resource' },
                 {
                   key: 'timestamp',

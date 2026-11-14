@@ -1,12 +1,12 @@
 /**
  * License Model
  * 
- * Represents a subscription assigned to a user.
+ * Represents a subscription assigned to an employee.
  * Queries the PostgreSQL database for all operations.
  * 
  * Fields:
  * - id: Unique identifier (auto-increment from database)
- * - user_id: ID of the user (Foreign Key)
+ * - employee_id: ID of the employee (Foreign Key)
  * - software_id: ID of the software (Foreign Key)
  * - assigned_date: When the license was assigned
  * - last_active_date: When the user last used the software
@@ -40,15 +40,15 @@ const getAllLicenses = async () => {
     const result = await pool.query(`
       SELECT
         licenses.*,
-        users.name AS "userName",
-        users.email AS "userEmail",
+        employees.name AS "employeeName",
+        employees.email AS "employeeEmail",
         software.name AS "softwareName",
         software.category AS "softwareCategory",
         software.price_per_seat AS cost,
         licenses.assigned_date AS "assignedDate",
         licenses.last_active_date AS "lastActivityDate"
       FROM licenses
-      JOIN users ON licenses.user_id = users.id
+      JOIN employees ON licenses.employee_id = employees.id
       JOIN software ON licenses.software_id = software.id
       ORDER BY licenses.id ASC
     `);
@@ -69,15 +69,15 @@ const getLicenseById = async (id) => {
     const result = await pool.query(
       `SELECT
         licenses.*,
-        users.name AS "userName",
-        users.email AS "userEmail",
+        employees.name AS "employeeName",
+        employees.email AS "employeeEmail",
         software.name AS "softwareName",
         software.category AS "softwareCategory",
         software.price_per_seat AS cost,
         licenses.assigned_date AS "assignedDate",
         licenses.last_active_date AS "lastActivityDate"
       FROM licenses
-      JOIN users ON licenses.user_id = users.id
+      JOIN employees ON licenses.employee_id = employees.id
       JOIN software ON licenses.software_id = software.id
       WHERE licenses.id = $1`,
       [id]
@@ -90,32 +90,32 @@ const getLicenseById = async (id) => {
 };
 
 /**
- * Get licenses by user ID from the database
- * Args: userId - User ID
+ * Get licenses by employee ID from the database
+ * Args: employeeId - Employee ID
  * Returns: Array of license objects for that user
  */
-const getLicensesByUserId = async (userId) => {
+const getLicensesByEmployeeId = async (employeeId) => {
   try {
     const result = await pool.query(
       `SELECT
         licenses.*,
-        users.name AS "userName",
-        users.email AS "userEmail",
+        employees.name AS "employeeName",
+        employees.email AS "employeeEmail",
         software.name AS "softwareName",
         software.category AS "softwareCategory",
         software.price_per_seat AS cost,
         licenses.assigned_date AS "assignedDate",
         licenses.last_active_date AS "lastActivityDate"
       FROM licenses
-      JOIN users ON licenses.user_id = users.id
+      JOIN employees ON licenses.employee_id = employees.id
       JOIN software ON licenses.software_id = software.id
-      WHERE licenses.user_id = $1
+      WHERE licenses.employee_id = $1
       ORDER BY licenses.id ASC`,
-      [userId]
+      [employeeId]
     );
     return result.rows;
   } catch (error) {
-    console.error('Database error in getLicensesByUserId:', error.message);
+    console.error('Database error in getLicensesByEmployeeId:', error.message);
     throw error;
   }
 };
@@ -130,15 +130,15 @@ const getLicensesBySoftwareId = async (softwareId) => {
     const result = await pool.query(
       `SELECT
         licenses.*,
-        users.name AS "userName",
-        users.email AS "userEmail",
+        employees.name AS "employeeName",
+        employees.email AS "employeeEmail",
         software.name AS "softwareName",
         software.category AS "softwareCategory",
         software.price_per_seat AS cost,
         licenses.assigned_date AS "assignedDate",
         licenses.last_active_date AS "lastActivityDate"
       FROM licenses
-      JOIN users ON licenses.user_id = users.id
+      JOIN employees ON licenses.employee_id = employees.id
       JOIN software ON licenses.software_id = software.id
       WHERE licenses.software_id = $1
       ORDER BY licenses.id ASC`,
@@ -153,18 +153,18 @@ const getLicensesBySoftwareId = async (softwareId) => {
 
 /**
  * Create new license in the database
- * Args: licenseData - Object with { user_id, software_id, assigned_date, last_active_date, status }
+ * Args: licenseData - Object with { employee_id, software_id, assigned_date, last_active_date, status }
  * Returns: The newly created license object with ID
  */
 const createLicense = async (licenseData) => {
   try {
-    const { user_id, software_id } = licenseData;
+    const { employee_id, software_id } = licenseData;
     const assignedDate = licenseData.assigned_date || new Date();
     const lastActiveDate = licenseData.last_active_date || assignedDate;
     const status = licenseData.status || 'active';
     const result = await pool.query(
-      'INSERT INTO licenses (user_id, software_id, assigned_date, last_active_date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-      [user_id, software_id, assignedDate, lastActiveDate, status]
+      'INSERT INTO licenses (employee_id, software_id, assigned_date, last_active_date, status) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [employee_id, software_id, assignedDate, lastActiveDate, status]
     );
     return result.rows[0];
   } catch (error) {
@@ -185,7 +185,7 @@ const updateLicense = async (id, licenseData) => {
     let paramCount = 1;
 
     for (const [key, value] of Object.entries(licenseData)) {
-      if (key !== 'id' && key !== 'created_at' && key !== 'updated_at' && value !== undefined) {
+      if (['employee_id', 'software_id', 'assigned_date', 'last_active_date', 'status'].includes(key) && value !== undefined) {
         fields.push(`${key} = $${paramCount}`);
         values.push(value);
         paramCount++;
@@ -239,7 +239,7 @@ export default {
   checkIfIdle,
   getAllLicenses,
   getLicenseById,
-  getLicensesByUserId,
+  getLicensesByEmployeeId,
   getLicensesBySoftwareId,
   createLicense,
   updateLicense,

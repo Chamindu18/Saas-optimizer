@@ -1,12 +1,13 @@
 /**
- * USERS PAGE
- * User management with CRUD operations
+ * EMPLOYEES PAGE
+ * License assignees without application credentials
  */
 
 import React, { useState } from 'react';
 import { useAsync } from '../hooks/useAsync';
 import { useForm } from '../hooks/useForm';
-import { userAPI } from '../services/api';
+import { employeeAPI } from '../services/api';
+import { useRole } from '../hooks/useRole';
 import Button from '../components/common/Button';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
@@ -14,18 +15,18 @@ import Modal from '../components/common/Modal';
 import Table from '../components/common/Table';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
-import Badge from '../components/common/Badge';
-import { formatDate, isValidEmail, getRoleDisplayName, getRoleColor } from '../utils/formatters';
+import { formatDate, isValidEmail } from '../utils/formatters';
 import './ManagementPages.css';
 
 function UsersPage() {
+  const { isManager } = useRole();
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [error, setError] = useState(null);
 
   // Fetch users
   const { data: users, isLoading, error: fetchError, execute: refetch } = useAsync(
-    () => userAPI.getAllUsers(),
+    () => employeeAPI.getAll(),
     true
   );
 
@@ -40,13 +41,13 @@ function UsersPage() {
 
   // Form hook
   const form = useForm(
-    editingUser || { name: '', email: '', role: 'user' },
+    editingUser || { name: '', email: '' },
     async (values) => {
       try {
         if (editingUser) {
-          await userAPI.updateUser(editingUser.id, values);
+          await employeeAPI.update(editingUser.id, values.name, values.email);
         } else {
-          await userAPI.createUser(values.name, values.email);
+          await employeeAPI.create(values.name, values.email);
         }
         setShowModal(false);
         setEditingUser(null);
@@ -61,7 +62,7 @@ function UsersPage() {
   const handleDelete = async (userId) => {
     if (window.confirm('Are you sure you want to delete this user?')) {
       try {
-        await userAPI.deleteUser(userId);
+        await employeeAPI.remove(userId);
         refetch();
       } catch (err) {
         setError(err.message);
@@ -74,20 +75,19 @@ function UsersPage() {
     if (user) {
       form.setFieldValue('name', user.name);
       form.setFieldValue('email', user.email);
-      form.setFieldValue('role', user.role || 'user');
     } else {
       form.reset();
     }
     setShowModal(true);
   };
 
-  if (isLoading) return <Spinner text="Loading users..." />;
+  if (isLoading) return <Spinner text="Loading employees..." />;
 
   return (
     <div className="management-page">
       <div className="management-header">
-        <h1>Users</h1>
-        <Button onClick={() => openModal()}>Add User</Button>
+        <h1>Employees</h1>
+        {isManager && <Button onClick={() => openModal()}>Add Employee</Button>}
       </div>
 
       {(error || fetchError) && (
@@ -101,20 +101,11 @@ function UsersPage() {
             { key: 'name', label: 'Name' },
             { key: 'email', label: 'Email' },
             {
-              key: 'role',
-              label: 'Role',
-              render: (role) => (
-                <Badge variant="primary" style={{ color: getRoleColor(role) }}>
-                  {getRoleDisplayName(role)}
-                </Badge>
-              ),
-            },
-            {
               key: 'created_at',
               label: 'Created',
               render: (date) => formatDate(date),
             },
-            {
+            ...(isManager ? [{
               key: 'actions',
               label: 'Actions',
               render: (_, row) => (
@@ -127,7 +118,7 @@ function UsersPage() {
                   </Button>
                 </div>
               ),
-            },
+            }] : []),
           ]}
           data={users || []}
         />
@@ -136,7 +127,7 @@ function UsersPage() {
       {/* Modal */}
       <Modal
         isOpen={showModal}
-        title={editingUser ? 'Edit User' : 'Add New User'}
+        title={editingUser ? 'Edit Employee' : 'Add Employee'}
         onClose={() => setShowModal(false)}
         size="md"
         actions={
@@ -145,7 +136,7 @@ function UsersPage() {
               Cancel
             </Button>
             <Button type="submit" form="user-form" loading={form.isSubmitting}>
-              {editingUser ? 'Update' : 'Create'} User
+              {editingUser ? 'Update' : 'Create'} Employee
             </Button>
           </div>
         }
@@ -169,21 +160,6 @@ function UsersPage() {
             error={form.touched.email ? form.errors.email : null}
             required
           />
-          <div className="form-group">
-            <label htmlFor="role">Role</label>
-            <select
-              id="role"
-              name="role"
-              value={form.values.role}
-              onChange={form.handleChange}
-              className="form-select"
-            >
-              <option value="user">User</option>
-              <option value="manager">Manager</option>
-              <option value="viewer">Viewer</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
         </form>
       </Modal>
     </div>

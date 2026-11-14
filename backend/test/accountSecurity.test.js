@@ -153,7 +153,7 @@ test('role changes override stale token claims on subsequent requests', async ()
   users.get(2).role = 'viewer';
   assert.equal((await request('GET', '/api/users', 2, null, managerToken)).status, 403);
   const viewerToken = token(3, 'viewer');
-  users.get(3).role = 'manager';
+  users.get(3).role = 'admin';
   assert.equal((await request('GET', '/api/users', 3, null, viewerToken)).status, 200);
 });
 
@@ -178,11 +178,12 @@ test('viewer may read and update only their own approved fields', async () => {
   noHash(update);
 });
 
-test('manager gets a safe read-only directory but cannot mutate other accounts', async () => {
+test('manager can read self but not the account directory or other accounts', async () => {
   const list = await request('GET', '/api/users', 2);
-  assert.equal(list.status, 200);
+  assert.equal(list.status, 403);
   noHash(list);
-  assert.equal((await request('GET', '/api/users/3', 2)).status, 200);
+  assert.equal((await request('GET', '/api/users/2', 2)).status, 200);
+  assert.equal((await request('GET', '/api/users/3', 2)).status, 403);
   assert.equal((await request('PUT', '/api/users/3', 2, { name: 'Changed' })).status, 403);
   assert.equal((await request('POST', '/api/users', 2, { name: 'X', email: 'x@test.invalid', password: 'password123' })).status, 403);
   assert.equal((await request('DELETE', '/api/users/3', 2)).status, 403);

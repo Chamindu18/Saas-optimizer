@@ -20,7 +20,7 @@ const getDashboardStats = async (req, res) => {
       totalSpendResult,
     ] = await Promise.all([
       pool.query('SELECT COUNT(*) AS count FROM licenses'),
-      pool.query('SELECT COUNT(DISTINCT user_id) AS count FROM licenses WHERE status = $1', ['active']),
+      pool.query('SELECT COUNT(DISTINCT employee_id) AS count FROM licenses WHERE status = $1', ['active']),
       pool.query('SELECT COUNT(*) AS count FROM software'),
       pool.query(
         'SELECT COALESCE(SUM(software.price_per_seat), 0) as total FROM licenses JOIN software ON licenses.software_id = software.id WHERE licenses.status = $1',

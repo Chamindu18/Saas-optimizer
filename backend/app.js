@@ -20,6 +20,7 @@ import pool from './config/db.js';
 // Import routes
 import authRoutes from './routes/auth.js';
 import userRoutes from './routes/userRoutes.js';
+import employeeRoutes from './routes/employeeRoutes.js';
 import softwareRoutes from './routes/softwareRoutes.js';
 import licenseRoutes from './routes/licenseRoutes.js';
 import dashboardRoutes from './routes/dashboardRoutes.js';
@@ -96,6 +97,7 @@ app.use('/api/auth', authRoutes);
 
 // User routes: /api/users
 app.use('/api/users', userRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // Software routes: /api/software
 app.use('/api/software', softwareRoutes);

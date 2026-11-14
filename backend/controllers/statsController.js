@@ -13,7 +13,7 @@ import pool from '../config/db.js';
 const getHomeStats = async (req, res) => {
   try {
     const [usersResult, softwareResult, licensesResult] = await Promise.all([
-      pool.query('SELECT COUNT(*) AS count FROM users'),
+      pool.query('SELECT COUNT(*) AS count FROM employees'),
       pool.query('SELECT COUNT(*) AS count FROM software'),
       pool.query('SELECT COUNT(*) AS count FROM licenses'),
     ]);

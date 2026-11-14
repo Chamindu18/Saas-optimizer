@@ -105,9 +105,9 @@ export default function Sidebar() {
     },
     {
       id: 'users',
-      label: 'Users',
+      label: 'Employees',
       icon: <IconUsers />,
-      path: '/users',
+      path: '/employees',
       roles: ['admin', 'manager', 'viewer'],
       section: 'MAIN'
     },

@@ -175,7 +175,7 @@ export default function DashboardPage() {
                         </div>
                       </td>
                       <td>
-                        <div className="table-cell-content">{license.userName}</div>
+                        <div className="table-cell-content">{license.employeeName}</div>
                       </td>
                       <td>
                         <div className="table-cell-content">

@@ -111,7 +111,7 @@ export default function HomePage() {
               </div>
               <div className="preview-content">
                 <div className="preview-metric">
-                  <div className="preview-label">Total Users</div>
+                  <div className="preview-label">Total Employees</div>
                   <div className="preview-value">{stats.totalUsers.toLocaleString()}</div>
                 </div>
                 <div className="preview-metric">
@@ -136,7 +136,7 @@ export default function HomePage() {
       <section className="stats-bar">
         <div className="stat">
           <div className="stat-value">{stats.totalUsers.toLocaleString()}</div>
-          <div className="stat-label">Total users</div>
+          <div className="stat-label">Total employees</div>
         </div>
         <div className="stat-divider"></div>
         <div className="stat">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useId, useState } from 'react';
 
 const IconEye = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -25,23 +25,30 @@ export default function Input({
   disabled = false,
   className = '',
   showPasswordToggle = false,
+  id,
   ...props
 }) {
   const [showPassword, setShowPassword] = useState(false);
+  const generatedId = useId();
+  const inputId = id || generatedId;
+  const descriptionId = `${inputId}-description`;
 
   const inputType = showPasswordToggle && showPassword ? 'text' : type;
 
   return (
     <div className="input-wrapper">
-      {label && <label className="input-label">{label}</label>}
+      {label && <label className="input-label" htmlFor={inputId}>{label}</label>}
       <div className="input-container">
         <input
+          id={inputId}
           type={inputType}
           className={`input ${error ? 'error' : ''} ${className}`}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
           disabled={disabled}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={errorMessage ? descriptionId : undefined}
           {...props}
         />
         {showPasswordToggle && type === 'password' && (
@@ -50,12 +57,13 @@ export default function Input({
             className="input-toggle-password"
             onClick={() => setShowPassword(!showPassword)}
             tabIndex="-1"
+            aria-label={showPassword ? 'Hide password' : 'Show password'}
           >
             {showPassword ? <IconEyeOff /> : <IconEye />}
           </button>
         )}
       </div>
-      {error && errorMessage && <span className="input-error-message">{errorMessage}</span>}
+      {error && errorMessage && <span id={descriptionId} className="input-error-message" role="alert">{errorMessage}</span>}
     </div>
   );
 }

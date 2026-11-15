@@ -11,6 +11,16 @@ import './AdminPage.css';
 
 export default function AdminPage() {
   const [tab, setTab] = useState('overview');
+  const tabs = ['overview', 'accounts', 'licenses', 'audit', 'health'];
+  const handleTabKeyDown = (event, index) => {
+    const next = event.key === 'ArrowRight' ? (index + 1) % tabs.length
+      : event.key === 'ArrowLeft' ? (index + tabs.length - 1) % tabs.length
+      : event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : null;
+    if (next === null) return;
+    event.preventDefault();
+    setTab(tabs[next]);
+    event.currentTarget.parentElement.querySelectorAll('[role="tab"]')[next].focus();
+  };
   const [account, setAccount] = useState({ name: '', email: '', password: '' });
   const [mutationError, setMutationError] = useState(null);
   const stats = useAsync(adminAPI.getStats, tab === 'overview');
@@ -46,10 +56,11 @@ export default function AdminPage() {
 
   return <div className="admin-page">
     <div className="admin-header"><h1>Admin Panel</h1><p className="admin-subtitle">Account and system administration</p></div>
-    <div className="admin-tabs">{['overview', 'accounts', 'licenses', 'audit', 'health'].map(item =>
-      <button key={item} className={`admin-tab ${tab === item ? 'admin-tab--active' : ''}`} onClick={() => setTab(item)}>
+    <div className="admin-tabs" role="tablist" aria-label="Administration views">{tabs.map((item, index) =>
+      <button key={item} type="button" role="tab" id={`admin-tab-${item}`} aria-controls="admin-tab-panel" aria-selected={tab === item} tabIndex={tab === item ? 0 : -1} className={`admin-tab ${tab === item ? 'admin-tab--active' : ''}`} onClick={() => setTab(item)} onKeyDown={event => handleTabKeyDown(event, index)}>
         {item === 'audit' ? 'Audit Logs' : item === 'health' ? 'System Health' : item[0].toUpperCase() + item.slice(1)}
       </button>)}</div>
+    <div role="tabpanel" id="admin-tab-panel" aria-labelledby={`admin-tab-${tab}`} tabIndex={0}>
     {current.error && <ErrorMessage message={apiErrorMessage(current.error)} />}
     {mutationError && <ErrorMessage message={mutationError} onDismiss={() => setMutationError(null)} />}
     {current.isLoading && <Spinner size="sm" />}
@@ -86,5 +97,6 @@ export default function AdminPage() {
         <Table columns={[{ key: 'check_type', label: 'Check' }, { key: 'status', label: 'Status' },
           { key: 'ran_at', label: 'Checked', render: formatDate }]} data={health.data || []} /></>}
     </Card>}
+    </div>
   </div>;
 }

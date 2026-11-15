@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
+import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import app from '../app.js';
@@ -173,6 +173,16 @@ try {
       assert.ok((await run(() => document.body.innerText)).length > 20);
     }
   });
+  await check('management dialog focuses and restores its trigger', async () => {
+    await goto('/employees');
+    await waitFor(() => !![...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add Employee'));
+    await run(() => { const trigger = [...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add Employee'); trigger.focus(); trigger.click(); });
+    await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
+    await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    await waitFor(() => !document.querySelector('[role="dialog"]'));
+    assert.ok(await run(() => document.activeElement?.textContent?.trim() === 'Add Employee'));
+  });
   await check('admin creates a viewer login account', async () => {
     await goto('/admin'); await clickButton('Accounts');
     try { await waitFor(() => !!document.querySelector('form[aria-label="Create account"]')); }
@@ -226,7 +236,7 @@ try {
     await goto('/licenses'); await waitFor(() => document.body.innerText.includes('Assign License'));
     await clickButton('Assign License'); await select('employee_id', employee.id); await select('software_id', item.id);
     await run(() => document.getElementById('license-form').requestSubmit());
-    await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
+    await waitFor(() => !document.querySelector('[role="dialog"]'));
     const response = await request('/licenses');
     assert.equal(response.status, 200);
     assert.ok((response.body.data || response.body).some(x => x.employee_id === employee.id && x.software_id === item.id));
@@ -280,7 +290,7 @@ try {
     await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add Employee'));
     assert.equal((await request('/admin/users')).status, 403);
   });
-  for (const width of [390, 768, 1440]) {
+  for (const width of [390, 768, 1024, 1440]) {
     await check(`${width}px viewport renders landing and management`, async () => {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
       for (const path of ['/home','/dashboard','/licenses']) {
@@ -288,9 +298,29 @@ try {
         assert.ok((await run(() => document.body.innerText)).length > 50);
         const overflow = await run(() => document.documentElement.scrollWidth - innerWidth);
         assert.ok(overflow <= 2, `${path} overflows viewport by ${overflow}px`);
+        if (path === '/dashboard') {
+          const screenshotDir = resolve('../frontend/qa-screenshots');
+          await mkdir(screenshotDir, { recursive: true });
+          const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
+          await writeFile(join(screenshotDir, `task08a-dashboard-${width}.png`), Buffer.from(shot.data, 'base64'));
+        }
       }
     });
   }
+  await check('mobile drawer keyboard dismissal and reduced motion', async () => {
+    await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await goto('/dashboard');
+    await waitFor(() => !!document.querySelector('[aria-label="Open navigation"]'));
+    await run(() => { const trigger = document.querySelector('[aria-label="Open navigation"]'); trigger.focus(); trigger.click(); });
+    await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
+    await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    await waitFor(() => !document.querySelector('[role="dialog"]'));
+    assert.ok(await run(() => document.activeElement?.getAttribute('aria-label') === 'Open navigation'));
+    await send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    const duration = await run(() => { const element = document.createElement('div'); element.className = 'skeleton'; document.querySelector('.sw-app').append(element); const value = getComputedStyle(element).animationDuration; element.remove(); return value; });
+    assert.ok(parseFloat(duration) <= 0.001, `reduced motion duration is ${duration}`);
+  });
   console.log(results.join('\n'));
   console.log(`Browser console errors: ${consoleErrors.length}; network loading failures: ${failed.length}`);
   console.log(`Expected HTTP errors observed: ${httpErrors.join(', ')}`);

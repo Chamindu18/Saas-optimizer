@@ -22,7 +22,7 @@ import { useAuth } from '../context/AuthContext';
  */
 const PrivateRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div role="status">Restoring session...</div>;
+  if (loading) return <div className="sw-session" role="status" aria-live="polite">Restoring your session…</div>;
   // Check if user has a valid token
   if (!isAuthenticated) {
     // Redirect to login if not authenticated

@@ -3,7 +3,7 @@
  * Reusable form input with validation and error states
  */
 
-import React from 'react';
+import React, { useId } from 'react';
 import './Input.css';
 
 export function Input({
@@ -18,14 +18,18 @@ export function Input({
   onBlur,
   helperText,
   icon: Icon = null,
+  id,
   ...props
 }) {
   const hasError = Boolean(error);
+  const generatedId = useId();
+  const inputId = id || generatedId;
+  const descriptionId = `${inputId}-description`;
 
   return (
     <div className="input-group">
       {label && (
-        <label className="input-label">
+        <label className="input-label" htmlFor={inputId}>
           {label}
           {required && <span className="input-required">*</span>}
         </label>
@@ -33,6 +37,7 @@ export function Input({
       <div className={`input-wrapper ${hasError ? 'input-wrapper--error' : ''}`}>
         {Icon && <Icon className="input-icon" />}
         <input
+          id={inputId}
           type={type}
           placeholder={placeholder}
           disabled={disabled}
@@ -40,11 +45,14 @@ export function Input({
           onChange={onChange}
           onBlur={onBlur}
           className={`input ${hasError ? 'input--error' : ''}`}
+          required={required}
+          aria-invalid={hasError || undefined}
+          aria-describedby={error || helperText ? descriptionId : undefined}
           {...props}
         />
       </div>
-      {error && <p className="input-error">{error}</p>}
-      {helperText && !error && <p className="input-helper">{helperText}</p>}
+      {error && <p id={descriptionId} className="input-error" role="alert">{error}</p>}
+      {helperText && !error && <p id={descriptionId} className="input-helper">{helperText}</p>}
     </div>
   );
 }

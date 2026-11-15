@@ -1,0 +1,54 @@
+@import "tailwindcss/theme";
+@import "tailwindcss/utilities";
+
+/* Task 08A: authoritative tokens for new shell and shared primitives.
+   Legacy page CSS still uses older variables until page migration in 08C. */
+:root {
+  --sw-canvas: #f8fafc;
+  --sw-surface: #ffffff;
+  --sw-surface-hover: #f1f5f9;
+  --sw-border: #e2e8f0;
+  --sw-text: #0f172a;
+  --sw-muted: #475569;
+  --sw-accent: #0f766e;
+  --sw-accent-hover: #115e59;
+  --sw-accent-soft: #ccfbf1;
+  --sw-warning: #b45309;
+  --sw-warning-soft: #fffbeb;
+  --sw-danger: #b91c1c;
+  --sw-danger-soft: #fef2f2;
+  --sw-success: #166534;
+  --sw-success-soft: #f0fdf4;
+  --sw-focus: #0f766e;
+  --sw-space-1: 4px;
+  --sw-space-2: 8px;
+  --sw-space-3: 12px;
+  --sw-space-4: 16px;
+  --sw-space-6: 24px;
+  --sw-space-8: 32px;
+  --sw-radius-sm: 6px;
+  --sw-radius-md: 8px;
+  --sw-radius-lg: 12px;
+  --sw-control-height: 40px;
+  --sw-control-height-touch: 44px;
+  --sw-shadow-popover: 0 12px 32px rgb(15 23 42 / 0.12);
+  --sw-sidebar-width: 232px;
+}
+
+.sw-app {
+  color: var(--sw-text);
+  background: var(--sw-canvas);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.sw-session { display: grid; place-items: center; min-height: 100vh; min-height: 100dvh; background: var(--sw-canvas); color: var(--sw-muted); font: 500 14px 'Inter', system-ui, sans-serif; }
+
+.sw-app :is(button, a, input, select, textarea):focus-visible,
+.sw-overlay :is(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--sw-focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sw-app *, .sw-overlay * { animation-duration: 0.01ms; transition-duration: 0.01ms; scroll-behavior: auto; }
+}

@@ -204,30 +204,58 @@ try {
     assert.ok(await run(() => document.activeElement?.textContent?.trim() === 'Add employee'));
   });
   await check('admin creates a viewer login account', async () => {
-    await goto('/admin'); await clickButton('Accounts');
-    try { await waitFor(() => !!document.querySelector('form[aria-label="Create account"]')); }
-    catch { throw new Error(`Accounts tab did not show form: ${(await run(() => document.body.innerText)).slice(0, 400)}`); }
+    await goto('/admin'); await waitFor(() => !!document.querySelector('.sw-management__table'));
+    await clickButton('Create account');
+    await waitFor(() => !!document.querySelector('[role="dialog"] form'));
     for (const [label, value] of [
-      ['Account name', 'Synthetic QA Account'],
-      ['Account email', 'account@seatwatch.test.invalid'],
-      ['Account password', 'AnotherSyntheticPass123!'],
+      ['Name', 'Synthetic QA Account'],
+      ['Email', 'account@seatwatch.test.invalid'],
+      ['Password', 'AnotherSyntheticPass123!'],
     ]) {
       assert.ok(await run((label, value) => {
-        const input = document.querySelector(`input[aria-label="${label}"]`);
+        const input = [...document.querySelectorAll('[role="dialog"] input')].find(e => e.labels?.[0]?.textContent?.includes(label));
         if (!input) return false;
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(input, value);
         input.dispatchEvent(new Event('input', { bubbles: true })); return true;
       }, label, value));
     }
-    const formState = await run(() => [...document.querySelectorAll('form[aria-label="Create account"] input')].map(x => ({ label: x.getAttribute('aria-label'), length: x.value.length, valid: x.checkValidity() })));
+    const formState = await run(() => [...document.querySelectorAll('[role="dialog"] form input')].map(x => ({ length: x.value.length, valid: x.checkValidity() })));
     assert.ok(formState.every(x => x.length > 0 && x.valid), `Account form invalid: ${JSON.stringify(formState)}`);
-    await run(() => document.querySelector('form[aria-label="Create account"]').requestSubmit());
+    await run(() => document.querySelector('[role="dialog"] form').requestSubmit());
     try { await waitFor(() => document.body.innerText.includes('account@seatwatch.test.invalid')); }
     catch { throw new Error(`Account did not appear: ${(await run(() => document.body.innerText)).slice(0, 400)}`); }
     const accounts = await request('/admin/users');
     assert.equal(accounts.status, 200);
     assert.ok((accounts.body.data || accounts.body).some(x => x.email === 'account@seatwatch.test.invalid' && x.role === 'viewer'));
   });
+  for (const width of [390, 768, 1024, 1440]) {
+    await check(`administration ${width}px account, role, and audit layout`, async () => {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
+      await goto('/admin'); await waitFor(() => !!document.querySelector('.sw-management__table'));
+      assert.ok(await run(() => document.documentElement.scrollWidth - innerWidth <= 2));
+      assert.ok(await run(() => !!document.querySelector('button[aria-label="Delete Synthetic QA Account"]')));
+      await capture(`task08c3-accounts-${width}.png`, width);
+      await clickButton('Create account'); await waitFor(() => !!document.querySelector('[role="dialog"]'));
+      assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
+      assert.ok(await run(() => document.querySelector('[role="dialog"]').getBoundingClientRect().height <= innerHeight));
+      await capture(`task08c3-create-${width}.png`, width);
+      await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+      await waitFor(() => !document.querySelector('[role="dialog"]'));
+      await run(() => document.querySelector('button[aria-label="Delete Synthetic QA Account"]').click());
+      await waitFor(() => !!document.querySelector('[role="dialog"]'));
+      assert.ok(await run(() => document.querySelector('[role="dialog"]').textContent.includes('account@seatwatch.test.invalid')));
+      await capture(`task08c3-delete-${width}.png`, width);
+      await clickButton('Cancel');
+      await goto('/role-management'); await waitFor(() => !!document.querySelector('button[aria-label="Change role for Synthetic QA Account"]'));
+      await run(() => document.querySelector('button[aria-label="Change role for Synthetic QA Account"]').click());
+      await waitFor(() => !!document.querySelector('#proposed-role'));
+      await capture(`task08c3-role-${width}.png`, width);
+      await clickButton('Cancel');
+      await goto('/audit-log'); await waitFor(() => document.body.innerText.includes('No recorded events') || !!document.querySelector('.sw-management__table'));
+      assert.ok(await run(() => document.documentElement.scrollWidth - innerWidth <= 2));
+      await capture(`task08c3-audit-${width}.png`, width);
+    });
+  }
   await check('create credential-free employee through form', async () => {
     await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add employee'));
     await clickButton('Add employee');
@@ -346,9 +374,13 @@ try {
   await check('admin role change applies after viewer refresh', async () => {
     await goto('/role-management'); await waitFor(() => document.body.innerText.includes('viewer@seatwatch.test.invalid'));
     assert.ok(await run(() => { const row = [...document.querySelectorAll('tr')].find(e => e.textContent.includes('viewer@seatwatch.test.invalid')); if (!row) return false; row.querySelector('button').click(); return true; }));
-    await run(() => { const select = document.querySelector('.role-dropdown'); select.value = 'manager'; select.dispatchEvent(new Event('change',{bubbles:true})); });
-    await clickButton('Save'); await clickButton('Confirm Change');
-    await waitFor(() => [...document.querySelectorAll('tr')].some(e => e.textContent.includes('viewer@seatwatch.test.invalid') && e.textContent.includes('manager')));
+    await waitFor(() => !!document.querySelector('#proposed-role'));
+    await run(() => { const select = document.querySelector('#proposed-role'); select.value = 'manager'; select.dispatchEvent(new Event('change',{bubbles:true})); });
+    await clickButton('Confirm role change');
+    await waitFor(() => [...document.querySelectorAll('tr')].some(e => e.textContent.includes('viewer@seatwatch.test.invalid') && e.textContent.includes('Manager')));
+    await goto('/audit-log'); await waitFor(() => !!document.querySelector('.sw-management__table'));
+    assert.ok(await run(() => document.body.innerText.includes('ROLE_CHANGE')));
+    await capture('task08c3-audit-recorded-1440.png', 1440);
     await run((token) => { localStorage.setItem('auth_token', token); }, viewerToken);
     await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add employee'));
     assert.equal((await request('/admin/users')).status, 403);

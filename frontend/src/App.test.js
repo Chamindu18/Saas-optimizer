@@ -62,6 +62,14 @@ test('viewer navigation hides admin controls and cannot open admin route', async
   expect(screen.queryByRole('link', { name: 'Administration' })).not.toBeInTheDocument();
   expect(window.location.pathname).toBe('/dashboard');
 });
+test('manager cannot open role management or audit log', async () => {
+  authAPI.me.mockResolvedValue({ id: 3, name: 'Manager', email: 'manager@example.com', role: 'manager' });
+  window.localStorage.setItem('auth_token', 'manager-token');
+  window.history.pushState({}, '', '/role-management');
+  render(<App />);
+  expect(await screen.findByRole('heading', { name: 'Dashboard route' })).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: 'Role management' })).not.toBeInTheDocument();
+});
 
 test('sidebar links indicate the active route and navigate between protected pages', async () => {
   window.localStorage.setItem('auth_token', 'viewer-token');

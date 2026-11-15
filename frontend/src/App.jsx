@@ -24,8 +24,6 @@ import UsersPage from './pages/UsersPage';
 import SoftwarePage from './pages/SoftwarePage';
 import LicensesPage from './pages/LicensesPage';
 import AdminPage from './pages/AdminPage';
-import RoleManagementPage from './pages/RoleManagementPage';
-import AuditLogPage from './pages/AuditLogPage';
 
 // Layout
 import MainLayout from './components/layout/MainLayout';
@@ -137,7 +135,7 @@ function App() {
               <PrivateRoute>
                 <AdminRoute>
                   <ProtectedLayout>
-                    <RoleManagementPage />
+                    <AdminPage />
                   </ProtectedLayout>
                 </AdminRoute>
               </PrivateRoute>
@@ -150,7 +148,7 @@ function App() {
               <PrivateRoute>
                 <AdminRoute>
                   <ProtectedLayout>
-                    <AuditLogPage />
+                    <AdminPage />
                   </ProtectedLayout>
                 </AdminRoute>
               </PrivateRoute>

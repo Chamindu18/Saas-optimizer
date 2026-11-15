@@ -1,173 +1,24 @@
-/**
- * ADMIN PAGE STYLES
- */
-
-.admin-page {
-  padding: var(--space-6);
-}
-
-.admin-header {
-  margin-bottom: var(--space-8);
-}
-
-.admin-header h1 {
-  font-size: var(--text-4xl);
-  margin: 0 0 var(--space-2) 0;
-}
-
-.admin-subtitle {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-lg);
-}
-
-.admin-tabs {
-  display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
-  border-bottom: var(--border-width) solid var(--border-color);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.admin-tab {
-  padding: var(--space-3) var(--space-4);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  color: var(--text-secondary);
-  font-weight: var(--fw-medium);
-  cursor: pointer;
-  transition: all var(--duration-base) var(--ease-in-out);
-  font-size: var(--text-base);
-  white-space: nowrap;
-}
-
-.admin-tab:hover {
-  color: var(--text-primary);
-}
-
-.admin-tab--active {
-  color: var(--color-primary-600);
-  border-bottom-color: var(--color-primary-600);
-}
-
-.admin-overview {
-  padding-bottom: var(--space-6);
-}
-
-.admin-overview h2 {
-  font-size: var(--text-2xl);
-  margin: 0 0 var(--space-6) 0;
-}
-
-.overview-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: var(--space-4);
-}
-
-.overview-card {
-  padding: var(--space-4);
-  background-color: var(--color-neutral-50);
-  border-radius: var(--border-radius-lg);
-  border: var(--border-width) solid var(--border-light);
-}
-
-.overview-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  text-align: center;
-}
-
-.overview-value {
-  font-size: var(--text-4xl);
-  font-weight: var(--fw-bold);
-  color: var(--color-primary-600);
-}
-
-.overview-label {
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  font-weight: var(--fw-medium);
-}
-
-.health-report {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.health-item {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding: var(--space-4);
-  background-color: var(--color-neutral-50);
-  border-radius: var(--border-radius-md);
-}
-
-.health-indicator {
-  flex-shrink: 0;
-  font-size: 1.5rem;
-  margin-top: 4px;
-}
-
-.health-indicator--healthy {
-  color: var(--color-success-600);
-}
-
-.health-indicator--warning {
-  color: var(--color-warning-600);
-}
-
-.health-indicator--error {
-  color: var(--color-danger-600);
-}
-
-.health-title {
-  margin: 0;
-  font-weight: var(--fw-semibold);
-  color: var(--text-primary);
-  font-size: var(--text-base);
-}
-
-.health-description {
-  margin: var(--space-1) 0 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-@media (max-width: 768px) {
-  .admin-page {
-    padding: var(--space-4);
-  }
-
-  .admin-header h1 {
-    font-size: var(--text-2xl);
-  }
-
-  .admin-tabs {
-    gap: var(--space-1);
-  }
-
-  .admin-tab {
-    padding: var(--space-2) var(--space-3);
-    font-size: var(--text-sm);
-  }
-
-  .overview-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--space-3);
-  }
-
-  .overview-card {
-    padding: var(--space-3);
-  }
-
-  .overview-value {
-    font-size: var(--text-3xl);
-  }
-}
+.sw-admin__tabs { display: flex; gap: 4px; width: max-content; max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--sw-border); }
+.sw-admin__tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 9px 16px; border-bottom: 2px solid transparent; color: var(--sw-muted); font: inherit; font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none; }
+.sw-admin__tabs a[aria-current="page"] { color: var(--sw-accent); border-bottom-color: var(--sw-accent); }
+.sw-admin__note { margin: 0; color: var(--sw-muted); font-size: 13px; line-height: 1.55; }
+.sw-admin__person { display: grid; gap: 2px; min-width: 0; }
+.sw-admin__person span { color: var(--sw-muted); font-weight: 400; overflow-wrap: anywhere; }
+.sw-admin__identity { width: 34%; }
+.sw-admin__actions { width: 180px; }
+.sw-admin__row-actions { display: flex; justify-content: flex-end; gap: 4px; }
+.sw-admin__row-actions .sw-button { min-height: 40px; }
+.sw-admin__details { overflow-wrap: anywhere; }
+.sw-admin__role-label { display: grid; gap: 6px; color: var(--sw-muted); font-size: 13px; font-weight: 600; }
+.sw-admin__role-label select, .sw-admin .sw-management__search select { min-height: var(--sw-control-height); padding: 8px 12px; border: 1px solid var(--sw-border); border-radius: var(--sw-radius-md); background: var(--sw-surface); color: var(--sw-text); font: inherit; }
+.sw-admin__pagination { display: flex; align-items: center; justify-content: flex-end; gap: 12px; color: var(--sw-muted); font-size: 13px; }
+.sw-admin__secondary { margin: 0; color: var(--sw-muted); font-size: 13px; }
+.sw-admin__secondary a { color: var(--sw-accent); }
+.sw-admin__system { padding: 24px; }
+.sw-admin__system h2 { margin: 0 0 16px; font-size: 17px; }
+.sw-admin__system dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin: 0; }
+.sw-admin__system dl div { padding: 12px; border: 1px solid var(--sw-border); border-radius: var(--sw-radius-md); }
+.sw-admin__system dt { color: var(--sw-muted); font-size: 12px; }
+.sw-admin__system dd { margin: 8px 0 0; color: var(--sw-text); font-size: 20px; font-weight: 650; }
+@media (max-width: 900px) { .sw-admin__actions { width: 112px; } .sw-admin__row-actions { flex-direction: column; } .sw-admin__row-actions .sw-button { min-height: 44px; } .sw-admin__identity { width: 220px; } }
+@media (max-width: 767px) { .sw-admin__tabs { width: 100%; } .sw-admin__tabs a { flex: 1; } .sw-admin__pagination { justify-content: space-between; flex-wrap: wrap; } }

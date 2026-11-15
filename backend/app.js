@@ -108,7 +108,7 @@ app.use('/api/licenses', licenseRoutes);
 // Dashboard routes: /api/dashboard
 app.use('/api/dashboard', dashboardRoutes);
 
-// Stats routes: /api/stats (public)
+// Stats routes: /api/stats (authenticated organizational counts)
 app.use('/api/stats', statsRoutes);
 
 // Admin routes: /api/admin (admin only)
@@ -129,9 +129,10 @@ app.use((req, res) => {
 // Global error handler (if any error is thrown in routes/services)
 app.use((err, req, res, next) => {
   console.error('Error:', err.message);
-  res.status(err.status || 500).json({
-    error: err.message || 'Internal Server Error',
-    status: err.status || 500,
+  const status = Number.isInteger(err.status) && err.status >= 400 && err.status < 500 ? err.status : 500;
+  res.status(status).json({
+    error: status === 500 ? 'Internal Server Error' : (err.message || 'Request failed'),
+    status,
   });
 });
 

@@ -70,16 +70,18 @@ try {
       const button = document.querySelector('.sw-auth__submit');
       const style = getComputedStyle(button);
       const a = luminance(style.color), b = luminance(style.backgroundColor);
-      return { route: location.pathname, width: innerWidth, overflow: document.documentElement.scrollWidth - innerWidth, heading: document.querySelector('h1')?.textContent, labels: [...document.querySelectorAll('.sw-auth .input-label')].map(node => node.textContent), button: { color: style.color, background: style.backgroundColor, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05), visible: !!button.getClientRects().length }, home: !!document.querySelector('a[href="/home"]') };
+      return { route: location.pathname, width: innerWidth, overflow: document.documentElement.scrollWidth - innerWidth, heading: document.querySelector('h1')?.textContent, labels: [...document.querySelectorAll('.sw-auth .input-label')].map(node => node.textContent), formCount: document.querySelectorAll('form').length, button: { color: style.color, background: style.backgroundColor, contrast: (Math.max(a, b) + .05) / (Math.min(a, b) + .05), visible: !!button.getClientRects().length }, home: !!document.querySelector('a[href="/home"]') };
     });
     assert.equal(result.route, `/${route}`);
     assert.ok(result.overflow <= 2, `${route} ${width} overflow ${result.overflow}`);
     assert.ok(result.button.visible && result.button.contrast >= 4.5, `${route} ${width} button contrast ${result.button.contrast}`);
-    assert.ok(result.home && result.labels.length >= 2);
+    assert.ok(result.home);
+    if (route === 'login') assert.ok(result.labels.length >= 2 && result.formCount === 1);
+    else assert.ok(result.formCount === 0 && result.labels.length === 0 && /administrator/i.test(result.heading));
     const layout = await send('Page.getLayoutMetrics');
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
     await writeFile(join(resolve('qa-screenshots/auth'), `${route}-${width}.png`), Buffer.from(shot.data, 'base64'));
-    if (width === 390) {
+    if (width === 390 && route === 'login') {
       await run(() => { const toggle = document.querySelector('.input-toggle-password'); toggle.focus(); toggle.click(); });
       assert.ok(await run(() => document.querySelector('input[name="password"]').type === 'text' && document.activeElement === document.querySelector('.input-toggle-password')), `${route} password visibility and focus`);
       await run(() => document.querySelector('.input-toggle-password').click());

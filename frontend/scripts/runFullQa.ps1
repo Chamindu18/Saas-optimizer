@@ -31,12 +31,15 @@ try {
   $env:ADMIN_BOOTSTRAP_NAME = 'Synthetic QA Admin'
   $env:ADMIN_BOOTSTRAP_EMAIL = 'admin@seatwatch.test.invalid'
   $env:ADMIN_BOOTSTRAP_PASSWORD = [guid]::NewGuid().ToString('N') + '!Qa'
-  & node migrations/runMigration.js
-  if ($LASTEXITCODE -ne 0) { throw 'migrations failed' }
-  & node scripts/seedAdmin.js
-  if ($LASTEXITCODE -ne 0) { throw 'admin seed failed' }
-  & node ../frontend/scripts/fullQaAdapter.mjs
-  if ($LASTEXITCODE -ne 0) { throw 'browser QA failed' }
+  Push-Location (Join-Path $PSScriptRoot '..\..\backend')
+  try {
+    & node migrations/runMigration.js
+    if ($LASTEXITCODE -ne 0) { throw 'migrations failed' }
+    & node scripts/seedAdmin.js
+    if ($LASTEXITCODE -ne 0) { throw 'admin seed failed' }
+    & node ../frontend/scripts/fullQaAdapter.mjs
+    if ($LASTEXITCODE -ne 0) { throw 'browser QA failed' }
+  } finally { Pop-Location }
 } finally {
   if ($started) { & $pgCtl -D $dataDir -m fast -w stop }
   Remove-Item Env:DATABASE_URL,Env:PGPASSWORD,Env:JWT_SECRET,Env:ADMIN_BOOTSTRAP_NAME,Env:ADMIN_BOOTSTRAP_EMAIL,Env:ADMIN_BOOTSTRAP_PASSWORD -ErrorAction SilentlyContinue

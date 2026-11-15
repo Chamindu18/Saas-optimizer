@@ -77,14 +77,14 @@ Licenses reference employees rather than login accounts. Account deletion does n
 | --- | :---: | :---: | :---: |
 | View dashboard, employees, software, and licenses | Yes | Yes | Yes |
 | Create/edit employees and software | No | Yes | Yes |
-| Create license assignments | No | Per server policy | Yes |
+| Create license assignments | No | Yes | Yes |
 | Prune/reactivate assignments | No | No | Yes |
 | Manage login accounts and roles | No | No | Yes |
 | View administrative audit tools | No | No | Yes |
 
-The **backend** is authoritative for authorization; navigation visibility is only a UI convenience. Public registration creates a **viewer** account. Account creation by administrators also initially creates a viewer. Admins cannot delete themselves or change their own role, and the last administrator is protected from deletion/demotion.
+The **backend** is authoritative for authorization; navigation visibility is only a UI convenience. Public registration is disabled. Administrators provision accounts through the authenticated account-management workflow; new accounts initially have the viewer role. An administrator may subsequently assign manager or admin through the protected role endpoint. Admins cannot delete themselves or change their own role, and the last administrator is protected from deletion/demotion.
 
-> **Security and deployment warning:** This is currently **one shared organizational workspace**. A self-registered viewer can read organizational inventory. Do **not** expose unrestricted public registration on a deployed internal inventory system. Restrict registration or implement approved invitations before a public release. SeatWatch does **not** provide per-company tenant isolation.
+> **Access policy:** This is **one shared organizational workspace**. Every administrator-provisioned viewer can read its organizational inventory. Provision accounts only for authorized people. SeatWatch does **not** provide per-company tenant isolation.
 
 ## Local setup
 
@@ -169,7 +169,7 @@ On a fresh database, all four should apply. Applied migrations are skipped on su
 
 ### 5. Bootstrap the first administrator
 
-Public registration creates only viewer accounts. The backend provides a one-time administrator bootstrap:
+Public registration is disabled. The backend provides a separate one-time administrator bootstrap for a new installation:
 
 ```powershell
 npm run seed:admin
@@ -240,7 +240,7 @@ npm install
 npm run dev
 ```
 
-Open **http://localhost:5173** (or the URL printed by Vite). For local development, `VITE_API_URL` defaults to `/api`, and the configured Vite proxy forwards requests to Express. Login as the administrator you bootstrapped, or register a new read-only viewer account.
+Open **http://localhost:5173** (or the URL printed by Vite). For local development, `VITE_API_URL` defaults to `/api`, and the configured Vite proxy forwards requests to Express. Sign in as the administrator you bootstrapped, then use Administration to provision viewer accounts and assign approved roles.
 
 ## License states and financial definitions
 
@@ -267,7 +267,7 @@ The API is served under `/api`. Representative endpoints include:
 
 | Area | Endpoints |
 | --- | --- |
-| Authentication | `/api/auth` (login/registration), `GET /api/auth/me` |
+| Authentication | `POST /api/auth/login`, `GET /api/auth/me`; `POST /api/auth/register` always returns 403 |
 | Employees | `/api/employees` |
 | Software | `/api/software` |
 | Licenses | `/api/licenses` |
@@ -306,16 +306,18 @@ The integration/browser harnesses are designed to use disposable, locally verifi
 ## Security notes and limitations
 
 - JWTs are signed using a required, private `JWT_SECRET`; missing secrets must fail closed.
+- The server entry point refuses to start without `JWT_SECRET`. Configure it before deployment; never put it in frontend environment variables.
 - Authentication checks the current account and role in PostgreSQL, not only a potentially stale token role.
 - Account API projections exclude password hashes. Role/ownership controls are enforced on the server.
+- Organizational summary counts at `/api/stats/home` require authentication.
 - Last-admin, self-deletion, and self-role-change protections are enforced in account mutation logic.
 - User-supplied SQL parameters are parameterized; database constraints preserve historical relationships.
 - The demo data is synthetic, but **real** seeded data is visible to all authorized viewer accounts because this is a shared organizational workspace.
 - Audit logging is **best effort** and not a complete, immutable compliance history.
-- The app has no invite/approval flow, password reset, email verification, rate-limiting guarantee, provider integrations, invoice reconciliation, currency setting, or multi-tenant data isolation established for release.
+- The app has no invite/approval flow, password reset, email verification, login rate limiting, provider integrations, invoice reconciliation, currency setting, or multi-tenant data isolation established for release.
 - Remaining dependency advisories require continued assessment; a previous patch addressed the known Express parser and proxy-address issues, but that does not imply a vulnerability-free dependency tree.
 
-**Before public deployment:** Restrict self-registration, complete security and accessibility review, configure HTTPS and secret management, determine the intended access model, and verify reverse-proxy/CORS behavior. Treat the local demo as an MVP, not a production security certification.
+**Before public deployment:** Complete security and accessibility review, configure HTTPS and secret management, add login brute-force protection, and verify reverse-proxy/CORS behavior. Treat the local demo as an MVP, not a production security certification.
 
 ## Deployment considerations
 
@@ -332,19 +334,18 @@ The deployment host must:
 2. Route same-origin `/api` traffic to Express, **or** set `VITE_API_URL` to an approved API URL **at build time** and configure backend CORS accordingly.
 3. Provide PostgreSQL, a secure `JWT_SECRET`, the necessary backend environment variables, and verified migrations.
 4. Run behind HTTPS with suitable logging, monitoring, backups, and access restrictions.
-5. Avoid exposing public registration to shared sensitive inventory until the authorization model is intentionally addressed.
+5. Provision accounts through an authorized administrator and restrict deployment access to the intended organization.
 
 See [`DEPLOYMENT.md`](DEPLOYMENT.md) for repository-specific deployment guidance; review that document against the current Vite setup before following older hosting instructions.
 
 ## Development status
 
-The application has undergone incremental work on account security, employee/account separation, PostgreSQL integrity, license lifecycle/financial correctness, Vite migration, responsive design, and browser QA. The current development focus is the public/authentication UI and release-readiness checks. A landing-page-only browser check passed after the CTA contrast fix, while a wider isolated browser harness reported a **loopback hostname mismatch** (`localhost` versus `127.0.0.1`) that still requires retesting and correction. Do not describe full end-to-end regression as green until that is resolved.
+The application has undergone incremental work on account security, employee/account separation, PostgreSQL integrity, license lifecycle/financial correctness, Vite migration, responsive design, and browser QA. Public registration now returns 403, and the isolated full browser workflow has passed with administrator provisioning and viewer access checks. Release readiness still requires deployment-specific security and accessibility review.
 
 Additional work to prioritize:
 
-- Verify and refine Login/Registration against the same design system as the rest of the app.
-- Resolve the isolated browser QA host mismatch and rerun the full regression suite.
-- Restrict public viewer registration before exposing the shared workspace externally.
+- Verify Login and the administrator-provided access screen against the same design system as the rest of the app.
+- Add login brute-force protection before exposing the shared workspace externally.
 - Complete keyboard, screen-reader, contrast, performance, and security release reviews.
 - Validate hosting configuration, API proxying, database backups, and environment isolation.
 

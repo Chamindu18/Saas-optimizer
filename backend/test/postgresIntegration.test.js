@@ -100,20 +100,8 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
     const registered = await request(server, 'POST', '/api/auth/register', {
       name: 'Synthetic Account', email: 'account@test.invalid', password: 'test-password-strong', role: 'admin',
     });
-    assert.equal(registered.status, 201);
-    const accountId = registered.body.userId;
-    const stored = (await pool.query('SELECT password, role FROM users WHERE id = $1', [accountId])).rows[0];
-    assert.notEqual(stored.password, 'test-password-strong');
-    assert.ok(await bcrypt.compare('test-password-strong', stored.password));
-    assert.equal(stored.role, 'viewer');
-    assert.equal((await request(server, 'POST', '/api/auth/login',
-      { email: 'account@test.invalid', password: 'wrong-password' })).status, 401);
-    const login = await request(server, 'POST', '/api/auth/login',
-      { email: 'account@test.invalid', password: 'test-password-strong' });
-    assert.equal(login.status, 200);
-    assert.ok(login.body.token);
-    assert.ok(!('password' in login.body.user));
-
+    assert.equal(registered.status, 403);
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM users WHERE email = 'account@test.invalid'")).rows[0].count, 0);
     const adminHash = await bcrypt.hash('synthetic-admin-password', 10);
     const admin = (await pool.query(`INSERT INTO users (name, email, password, role)
       VALUES ('Synthetic Admin', 'admin@test.invalid', $1, 'admin') RETURNING id`, [adminHash])).rows[0];
@@ -121,6 +109,22 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
       { email: 'admin@test.invalid', password: 'synthetic-admin-password' });
     assert.equal(adminLogin.status, 200);
     const token = adminLogin.body.token;
+    const provisioned = await request(server, 'POST', '/api/users', {
+      name: 'Synthetic Account', email: 'account@test.invalid', password: 'test-password-strong', role: 'admin',
+    }, token);
+    assert.equal(provisioned.status, 201);
+    const accountId = provisioned.body.data.id;
+    const stored = (await pool.query('SELECT password, role FROM users WHERE id = $1', [accountId])).rows[0];
+    assert.notEqual(stored.password, 'test-password-strong');
+    assert.ok(await bcrypt.compare('test-password-strong', stored.password));
+    assert.equal(stored.role, 'viewer');
+    const login = await request(server, 'POST', '/api/auth/login',
+      { email: 'account@test.invalid', password: 'test-password-strong' });
+    assert.equal(login.status, 200);
+    assert.ok(login.body.token);
+    assert.ok(!('password' in login.body.user));
+    assert.equal((await request(server, 'GET', '/api/stats/home')).status, 401);
+    assert.equal((await request(server, 'GET', '/api/stats/home', undefined, login.body.token)).status, 200);
     const employee = await request(server, 'POST', '/api/employees',
       { name: 'Synthetic Employee', email: 'employee@test.invalid', password: 'must-not-store', role: 'admin' }, token);
     assert.equal(employee.status, 201);

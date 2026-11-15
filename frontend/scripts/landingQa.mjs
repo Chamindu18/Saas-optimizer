@@ -88,7 +88,7 @@ try {
         if (mobile.expanded === 'true') break;
         await delay(50);
       }
-      assert.equal(mobile.expanded, 'true'); assert.deepEqual(mobile.links, ['#features', '#how-it-works', '/login', '/register']);
+      assert.equal(mobile.expanded, 'true'); assert.deepEqual(mobile.links, ['#features', '#how-it-works', '/login']);
       const navShot = await send('Page.captureScreenshot', { format: 'png' });
       await writeFile(join(directory, 'mobile-navigation-390.png'), Buffer.from(navShot.data, 'base64'));
       await send('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });

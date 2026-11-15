@@ -1,10 +1,10 @@
 /**
  * Authentication Routes
  * 
- * Public endpoints for user registration and login
+ * Public authentication endpoints. Account provisioning is administrator controlled.
  * 
  * Endpoints:
- * POST /api/auth/register  - Create new user account
+ * POST /api/auth/register  - Public registration disabled (403)
  * POST /api/auth/login     - Login and get JWT token
  */
 
@@ -14,7 +14,7 @@ import authMiddleware from '../middleware/auth.js';
 
 const router = express.Router();
 
-// POST /api/auth/register - Register new user
+// Keep the route for existing clients; it always denies public registration.
 router.post('/register', authController.register);
 
 // POST /api/auth/login - Login user

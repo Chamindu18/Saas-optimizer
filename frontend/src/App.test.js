@@ -139,7 +139,8 @@ test('public landing page provides honest messaging and navigation', async () =>
   expect(within(nav).getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '#how-it-works');
   expect(screen.getByRole('heading', { name: 'A clearer record of every seat' })).toBeInTheDocument();
   expect(screen.getByText(/Activity dates are entered manually/)).toBeInTheDocument();
-  expect(screen.getAllByRole('link', { name: 'Create viewer account' }).every(link => link.getAttribute('href') === '/register')).toBe(true);
+  expect(screen.queryByRole('link', { name: 'Create viewer account' })).not.toBeInTheDocument();
+  expect(screen.getAllByText(/Accounts are provided by your organization's administrator/).length).toBeGreaterThan(0);
   expect(screen.getAllByRole('link', { name: 'Sign in' }).some(link => link.getAttribute('href') === '/login')).toBe(true);
   expect(screen.getByRole('img', { name: /Illustration of the SeatWatch workspace/ })).toBeInTheDocument();
   expect(screen.queryByText(/Free Trial|\$299|500\+ integrations|AI Analysis|automatic sync|billing savings/i)).not.toBeInTheDocument();

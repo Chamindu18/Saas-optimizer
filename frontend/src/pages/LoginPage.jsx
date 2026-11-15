@@ -56,6 +56,6 @@ export default function LoginPage() {
       {apiError && <p className="sw-auth__error" role="alert">{apiError}</p>}
       <button className="sw-auth__submit" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
     </form>
-    <p className="sw-auth__alternate">Need access? <Link to="/register">Create viewer account</Link></p>
+    <p className="sw-auth__alternate">Need access? Accounts are provided by your organization's administrator.</p>
   </AuthShell>;
 }

@@ -11,6 +11,7 @@ import pool from './config/db.js';
 import licenseService from './services/licenseService.js';
 
 const PORT = process.env.PORT || 5000;
+if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET is required to start the API');
 
 // ============================================
 // CRON JOB - Idle License Check

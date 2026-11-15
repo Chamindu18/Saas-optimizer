@@ -2,6 +2,13 @@
 
 Quick reference for all API endpoints with example requests and responses.
 
+Account access policy: `POST /api/auth/register` returns HTTP 403 with
+`{"success":false,"error":"Accounts are provided by your organization administrator"}`.
+Existing accounts sign in through `POST /api/auth/login`. Only an authenticated
+administrator can create a viewer account through `POST /api/users` or change a
+role through `PATCH /api/users/:id/role`. Account users and employee inventory
+records are separate tables.
+
 ## Base URL
 ```
 http://localhost:5000

@@ -137,11 +137,13 @@ test('session restoration returns the current database role without sensitive fi
   noHash(result);
 });
 
-test('public registration creates only a viewer and exposes no hash', async () => {
+test('public registration rejects account creation and privileged role input', async () => {
   const result = await request('POST', '/api/auth/register', null,
     { name: 'Registrant', email: 'registrant@test.invalid', password: 'password123', role: 'admin' });
-  assert.equal(result.status, 201);
-  assert.equal(result.body.user.role, 'viewer');
+  assert.equal(result.status, 403);
+  assert.equal(result.body.error, 'Accounts are provided by your organization administrator');
+  assert.equal(users.size, 4);
+  assert.equal(queries.length, 0);
   noHash(result);
 });
 
@@ -249,11 +251,11 @@ test('transactional mutation guards reject removing the last admin', async () =>
   assert.ok(queries.includes('ROLLBACK'));
 });
 
-test('missing signing secret fails securely without creating an account', async () => {
+test('missing signing secret fails securely on protected requests while registration stays disabled', async () => {
   delete process.env.JWT_SECRET;
   try {
     const result = await request('POST', '/api/auth/register', null, { name: 'New', email: 'new@test.invalid', password: 'password123' });
-    assert.equal(result.status, 500);
+    assert.equal(result.status, 403);
     assert.equal(users.size, 4);
     assert.equal((await request('GET', '/api/users/3', 3)).status, 500);
   } finally {

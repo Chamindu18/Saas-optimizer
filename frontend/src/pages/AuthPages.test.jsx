@@ -15,7 +15,8 @@ const show = Page => render(<MemoryRouter><Page /></MemoryRouter>);
 test('login has accessible fields, navigation, keyboard password toggle and required errors', () => {
   show(LoginPage);
   expect(screen.getByRole('heading', { name: 'Welcome back' })).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'Create viewer account' })).toHaveAttribute('href', '/register');
+  expect(screen.getByText(/Accounts are provided by your organization's administrator/)).toBeInTheDocument();
+  expect(screen.queryByRole('link', { name: /Create viewer account/ })).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Back to home' })).toHaveAttribute('href', '/home');
   expect(screen.getByLabelText('Email')).toHaveAttribute('autocomplete', 'username');
   const password = screen.getByLabelText('Password');
@@ -44,43 +45,13 @@ test('login keeps submission busy and announces endpoint errors', async () => {
   expect(await screen.findByText('Invalid credentials')).toHaveAttribute('role', 'alert');
 });
 
-test('registration describes viewer access and validates before sending existing payload', async () => {
-  register.mockResolvedValue({});
+test('registration route explains administrator-provided access without a signup form', () => {
   show(RegisterPage);
-  expect(screen.getByRole('heading', { name: 'Create a viewer account' })).toBeInTheDocument();
-  expect(screen.getByText(/current shared organizational workspace/)).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Access is provided by your administrator' })).toBeInTheDocument();
+  expect(screen.getByText(/Accounts are provided by your organization's administrator/)).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
-  fireEvent.click(screen.getByRole('button', { name: 'Create viewer account' }));
-  expect(screen.getByText('Name is required')).toBeInTheDocument();
-  expect(register).not.toHaveBeenCalled();
-  fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Synthetic Viewer' } });
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'viewer@example.test' } });
-  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
-  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'password123' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create viewer account' }));
-  await waitFor(() => expect(register).toHaveBeenCalledWith('Synthetic Viewer', 'viewer@example.test', 'password123'));
-});
-
-test('registration announces an existing-email API error', async () => {
-  register.mockRejectedValue(new Error('Email already registered'));
-  show(RegisterPage);
-  fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Synthetic Viewer' } });
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'viewer@example.test' } });
-  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'password123' } });
-  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'password123' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create viewer account' }));
-  expect(await screen.findByText('Email already registered')).toHaveAttribute('role', 'alert');
-});
-
-test('registration rejects invalid email and short password before the API call', () => {
-  show(RegisterPage);
-  fireEvent.change(screen.getByLabelText('Full name'), { target: { value: 'Synthetic Viewer' } });
-  fireEvent.change(screen.getByLabelText('Email'), { target: { value: 'invalid' } });
-  fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'short' } });
-  fireEvent.change(screen.getByLabelText('Confirm password'), { target: { value: 'short' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Create viewer account' }));
-  expect(screen.getByText('Email is invalid')).toHaveAttribute('role', 'alert');
-  expect(screen.getByText('Password must be at least 8 characters')).toHaveAttribute('role', 'alert');
+  expect(screen.queryByRole('form')).not.toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: /Create/ })).not.toBeInTheDocument();
   expect(register).not.toHaveBeenCalled();
 });
 

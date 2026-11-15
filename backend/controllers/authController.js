@@ -1,8 +1,8 @@
 /**
  * Authentication Controller
  * 
- * Handles user registration and login
- * - register: Creates new user with hashed password
+ * Handles public account access and login
+ * - register: Explicitly denies public account provisioning
  * - login: Verifies credentials and returns JWT token
  */
 
@@ -19,98 +19,11 @@ const getJwtSecret = () => {
   return secret;
 };
 
-/**
- * POST /api/auth/register
- * Create a new user account
- * 
- * Request body:
- * {
- *   "name": "John Doe",
- *   "email": "john@example.com",
- *   "password": "securePassword123"
- * }
- * 
- * Response on success (201):
- * {
- *   "success": true,
- *   "message": "User registered successfully",
- *   "userId": 1
- * }
- */
-const register = async (req, res) => {
-  try {
-    const jwtSecret = getJwtSecret();
-    // Accept 'fullName' from frontend, map to 'name' in DB
-    const { name: fullName, email, password } = req.body;
-    const name = fullName || '';  // Fallback if sent as 'name' from old code
-
-    // Validation
-    if (typeof name !== 'string' || !name.trim() || typeof email !== 'string' ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || typeof password !== 'string') {
-      return res.status(400).json({
-        success: false,
-        error: 'Name, email, and password are required',
-      });
-    }
-
-    if (password.length < 6) {
-      return res.status(400).json({
-        success: false,
-        error: 'Password must be at least 6 characters',
-      });
-    }
-
-    // Check if email already exists
-    const existingUser = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-
-    if (existingUser.rows.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email is already registered',
-      });
-    }
-
-    // Hash password with bcryptjs
-    // salt rounds: 10 (balance between security and performance)
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Insert new user into database with default role 'viewer'
-    // Never allow role to be passed in request body for security
-    const result = await pool.query(
-      'INSERT INTO users (name, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, name, email, role, created_at',
-      [name, email, hashedPassword, 'viewer']
-    );
-
-    const newUser = result.rows[0];
-    const token = jwt.sign(
-      { userId: newUser.id, email: newUser.email, role: newUser.role },
-      jwtSecret,
-      { expiresIn: '7d' }
-    );
-
-    res.status(201).json({
-      success: true,
-      message: 'User registered successfully',
-      userId: newUser.id,
-      token,
-      user: {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role,
-      },
-    });
-  } catch (error) {
-    console.error('Register error:', error.message);
-    res.status(500).json({
-      success: false,
-      error: 'Registration failed',
-    });
-  }
-};
+/** POST /api/auth/register retains its route contract while denying public signup. */
+const register = (_req, res) => res.status(403).json({
+  success: false,
+  error: 'Accounts are provided by your organization administrator',
+});
 
 /**
  * POST /api/auth/login

@@ -1,14 +1,14 @@
 /**
  * Stats Controller
  *
- * Public endpoints for lightweight, unauthenticated stats.
+ * Lightweight organizational counts for authenticated accounts.
  */
 
 import pool from '../config/db.js';
 
 /**
  * GET /api/stats/home
- * Returns public counts for the marketing homepage.
+ * Returns shared workspace counts to an authenticated account.
  */
 const getHomeStats = async (req, res) => {
   try {

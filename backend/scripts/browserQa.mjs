@@ -161,14 +161,33 @@ try {
     assert.doesNotMatch(text, /500\+|Free Trial|\$299|AI Analysis|guarantee/i);
   });
   await goto('/register');
-  await check('viewer registration', async () => {
-    await fill('Jane Doe', 'Synthetic QA Viewer');
-    await fill('you@company.com', 'viewer@seatwatch.test.invalid');
-    const count = await run(() => document.querySelectorAll('input[type=password]').length);
-    assert.equal(count, 2);
-    for (const index of [0, 1]) await run((index) => { const input = document.querySelectorAll('input[type=password]')[index]; const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; setter.call(input, 'SyntheticPass123!'); input.dispatchEvent(new Event('input',{bubbles:true})); }, index);
-    await clickButton('Create account');
-    await waitFor(() => location.pathname === '/dashboard');
+  await check('public registration denied and access guidance shown', async () => {
+    assert.match(await run(() => document.body.innerText), /Access is provided by your administrator/);
+    assert.equal(await run(() => document.querySelectorAll('form').length), 0);
+    assert.ok(await run(() => !!document.querySelector('a[href="/login"]')));
+    const denied = await run(async () => {
+      const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: 'Denied', email: 'denied@seatwatch.test.invalid', password: 'SyntheticPass123!', role: 'admin' }) });
+      return { status: response.status, body: await response.json() };
+    });
+    assert.equal(denied.status, 403);
+    assert.equal(denied.body.error, 'Accounts are provided by your organization administrator');
+    assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM users WHERE email = 'denied@seatwatch.test.invalid'")).rows[0].count, 0);
+  });
+  await goto('/login');
+  await check('admin provisions viewer through authorized account endpoint', async () => {
+    await fill('email', process.env.ADMIN_BOOTSTRAP_EMAIL);
+    await fill('password', process.env.ADMIN_BOOTSTRAP_PASSWORD);
+    await clickButton('Sign in'); await waitFor(() => location.pathname === '/dashboard');
+    const status = await run(async () => (await fetch('/api/users', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` }, body: JSON.stringify({ name: 'Synthetic QA Viewer', email: 'viewer@seatwatch.test.invalid', password: 'SyntheticPass123!', role: 'admin' }) })).status);
+    assert.equal(status, 201);
+    assert.equal((await pool.query("SELECT role FROM users WHERE email = 'viewer@seatwatch.test.invalid'")).rows[0].role, 'viewer');
+    await run(() => { localStorage.removeItem('auth_token'); localStorage.removeItem('user'); });
+  });
+  await goto('/login');
+  await check('provisioned viewer login', async () => {
+    await fill('email', 'viewer@seatwatch.test.invalid');
+    await fill('password', 'SyntheticPass123!');
+    await clickButton('Sign in'); await waitFor(() => location.pathname === '/dashboard');
     viewerToken = await run(() => localStorage.getItem('auth_token'));
   });
   await check('viewer session restore and protected data', async () => {

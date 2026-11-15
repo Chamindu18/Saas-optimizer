@@ -253,7 +253,9 @@ try {
     const response = await request('/dashboard/stats'); assert.equal(response.status, 200);
     const metrics = response.body.data || response.body;
     assert.equal(Number(metrics.totalSpend), 42.5); assert.equal(Number(metrics.activeLicenseCount), 1);
-    await goto('/dashboard'); await waitFor(() => document.body.innerText.includes('$42.50'));
+    await goto('/dashboard'); await waitFor(() => !!document.querySelector('[aria-label="Monthly spending by category"]'));
+    assert.ok(await run(() => !!document.querySelector('[aria-label="Monthly spending by category"]')));
+    assert.ok(await run(() => document.body.innerText.includes('Synthetic QA Employee')));
   });
   await check('idle report and potential savings from recorded activity', async () => {
     const licenses = await request('/licenses'); const license = (licenses.body.data || licenses.body)[0];
@@ -261,8 +263,13 @@ try {
     assert.equal((await request(`/licenses/${license.id}`, 'PUT', { last_active_date: oldDate })).status, 200);
     const idle = await request('/licenses/idle/list'); assert.equal(idle.status, 200);
     assert.equal((idle.body.data || idle.body).length, 1);
-    await goto('/licenses'); await clickButton('Idle Licenses'); await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
+    await goto('/licenses'); await waitFor(() => [...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Idle Licenses'));
+    await clickButton('Idle Licenses'); await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
     const metrics = await request('/dashboard/stats'); assert.equal(Number((metrics.body.data || metrics.body).potentialSavings), 42.5);
+    await goto('/dashboard'); await waitFor(() => document.body.innerText.includes('Estimated potential monthly savings'));
+    assert.ok(await run(() => document.querySelector('.sw-dashboard__tables')?.innerText.includes('Synthetic QA Employee')));
+    await goto('/licenses'); await waitFor(() => [...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Idle Licenses'));
+    await clickButton('Idle Licenses');
   });
   await check('prune, retained status, and financial effect', async () => {
     await clickButton('All Licenses'); await clickButton('Prune');
@@ -299,10 +306,17 @@ try {
         const overflow = await run(() => document.documentElement.scrollWidth - innerWidth);
         assert.ok(overflow <= 2, `${path} overflows viewport by ${overflow}px`);
         if (path === '/dashboard') {
+          await waitFor(() => !!document.querySelector('[aria-label="Monthly spending by category"]'));
+          assert.ok(await run(() => !!document.querySelector('h1') && document.querySelector('h1').textContent === 'Overview'));
+          assert.ok(await run(() => document.querySelectorAll('.sw-dashboard__table-panel').length === 2));
+          assert.ok(await run(() => [...document.querySelectorAll('.sw-dashboard__text-link')].every(a => a.getAttribute('href') === '/licenses')));
+          assert.ok(await run(() => [...document.querySelectorAll('.sw-dashboard__table-scroll')].every(e => e.scrollWidth >= e.clientWidth)));
           const screenshotDir = resolve('../frontend/qa-screenshots');
           await mkdir(screenshotDir, { recursive: true });
-          const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: false });
-          await writeFile(join(screenshotDir, `task08a-dashboard-${width}.png`), Buffer.from(shot.data, 'base64'));
+          const layout = await send('Page.getLayoutMetrics');
+          const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
+            clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
+          await writeFile(join(screenshotDir, `task08b-dashboard-${width}.png`), Buffer.from(shot.data, 'base64'));
         }
       }
     });

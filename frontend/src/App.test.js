@@ -130,11 +130,30 @@ test('account menu signs out and clears the stored token', async () => {
   expect(window.localStorage.getItem('auth_token')).toBeNull();
 });
 
-test('public landing page describes the current manual MVP without a purchase flow', async () => {
+test('public landing page provides honest messaging and navigation', async () => {
   window.history.pushState({}, '', '/home');
   render(<App />);
-  expect(await screen.findByRole('heading', { name: /Keep a clear record of software seats and spend/ })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Know where your software licenses go.' })).toBeInTheDocument();
+  const nav = screen.getByRole('navigation', { name: 'Main navigation' });
+  expect(within(nav).getByRole('link', { name: 'Features' })).toHaveAttribute('href', '#features');
+  expect(within(nav).getByRole('link', { name: 'How it works' })).toHaveAttribute('href', '#how-it-works');
+  expect(screen.getByRole('heading', { name: 'A clearer record of every seat' })).toBeInTheDocument();
   expect(screen.getByText(/Activity dates are entered manually/)).toBeInTheDocument();
-  expect(screen.getAllByRole('button', { name: 'Create viewer account' }).length).toBeGreaterThan(0);
-  expect(screen.queryByText(/Free Trial|\$299|500\+ integrations|AI Analysis/i)).not.toBeInTheDocument();
+  expect(screen.getAllByRole('link', { name: 'Create viewer account' }).every(link => link.getAttribute('href') === '/register')).toBe(true);
+  expect(screen.getAllByRole('link', { name: 'Sign in' }).some(link => link.getAttribute('href') === '/login')).toBe(true);
+  expect(screen.getByRole('img', { name: /Illustration of the SeatWatch workspace/ })).toBeInTheDocument();
+  expect(screen.queryByText(/Free Trial|\$299|500\+ integrations|AI Analysis|automatic sync|billing savings/i)).not.toBeInTheDocument();
+});
+
+test('landing mobile navigation opens, follows anchors, and closes on Escape', async () => {
+  window.history.pushState({}, '', '/home');
+  render(<App />);
+  const toggle = screen.getByRole('button', { name: 'Open menu' });
+  fireEvent.click(toggle);
+  const mobile = screen.getByRole('navigation', { name: 'Mobile navigation' });
+  expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  expect(within(mobile).getByRole('link', { name: 'Features' })).toHaveAttribute('href', '#features');
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('navigation', { name: 'Mobile navigation' })).not.toBeInTheDocument();
+  expect(toggle).toHaveFocus();
 });

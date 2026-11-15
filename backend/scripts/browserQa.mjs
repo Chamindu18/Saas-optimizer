@@ -175,13 +175,13 @@ try {
   });
   await check('management dialog focuses and restores its trigger', async () => {
     await goto('/employees');
-    await waitFor(() => !![...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add Employee'));
-    await run(() => { const trigger = [...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add Employee'); trigger.focus(); trigger.click(); });
+    await waitFor(() => !![...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add employee'));
+    await run(() => { const trigger = [...document.querySelectorAll('button')].find(e => e.textContent.trim() === 'Add employee'); trigger.focus(); trigger.click(); });
     await waitFor(() => !!document.querySelector('[role="dialog"]'));
     assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
     await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
     await waitFor(() => !document.querySelector('[role="dialog"]'));
-    assert.ok(await run(() => document.activeElement?.textContent?.trim() === 'Add Employee'));
+    assert.ok(await run(() => document.activeElement?.textContent?.trim() === 'Add employee'));
   });
   await check('admin creates a viewer login account', async () => {
     await goto('/admin'); await clickButton('Accounts');
@@ -209,10 +209,10 @@ try {
     assert.ok((accounts.body.data || accounts.body).some(x => x.email === 'account@seatwatch.test.invalid' && x.role === 'viewer'));
   });
   await check('create credential-free employee through form', async () => {
-    await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add Employee'));
-    await clickButton('Add Employee');
+    await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add employee'));
+    await clickButton('Add employee');
     await fill('name', 'Synthetic QA Employee'); await fill('email', 'employee@seatwatch.test.invalid');
-    await clickButton('Create Employee');
+    await clickButton('Create employee');
     await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
     const response = await request('/employees');
     assert.equal(response.status, 200);
@@ -220,13 +220,28 @@ try {
     assert.ok(!JSON.stringify(response.body).includes('password'));
   });
   await check('create software with monthly price through form', async () => {
-    await goto('/software'); await waitFor(() => document.body.innerText.includes('Add Software'));
-    await clickButton('Add Software');
+    await goto('/software'); await waitFor(() => document.body.innerText.includes('Add software'));
+    await clickButton('Add software');
     await fill('name', 'Synthetic QA Software'); await fill('category', 'QA'); await fill('price_per_seat', '42.50');
-    await clickButton('Create Software');
+    await clickButton('Create software');
     await waitFor(() => document.body.innerText.includes('Synthetic QA Software'));
     const response = await request('/software');
     assert.equal(response.status, 200); assert.ok(JSON.stringify(response.body).includes('42.50'));
+  });
+  await check('management forms expose validation and named row actions', async () => {
+    await goto('/employees'); await waitFor(() => !!document.querySelector('button[aria-label="Edit Synthetic QA Employee"]'));
+    assert.ok(await run(() => document.querySelector('th[scope="row"]')?.textContent.includes('Synthetic QA Employee')));
+    await clickButton('Add employee');
+    await run(() => document.querySelector('[role="dialog"] form').requestSubmit());
+    await waitFor(() => !!document.querySelector('[role="dialog"] [aria-invalid="true"]'));
+    assert.ok(await run(() => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes('required')));
+    await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+    await goto('/software'); await waitFor(() => !!document.querySelector('button[aria-label="Edit Synthetic QA Software"]'));
+    await clickButton('Add software');
+    await fill('name', 'Validation Product'); await fill('category', 'QA'); await fill('price_per_seat', '-1');
+    await run(() => document.querySelector('[role="dialog"] form').requestSubmit());
+    await waitFor(() => !!document.querySelector('[role="dialog"] [aria-invalid="true"]'));
+    assert.ok(await run(() => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes('nonnegative')));
   });
   await check('assign license with employee_id', async () => {
     const employees = await request('/employees'); const software = await request('/software');
@@ -284,8 +299,18 @@ try {
   });
   await check('employee with license history cannot be deleted', async () => {
     await goto('/employees'); await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
-    await clickButton('Delete'); await waitFor(() => document.body.innerText.toLowerCase().includes('license'));
+    assert.ok(await run(() => { const button = document.querySelector('button[aria-label="Delete Synthetic QA Employee"]'); button?.click(); return !!button; }));
+    await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    await clickButton('Delete employee'); await waitFor(() => document.querySelector('[role="alert"]')?.textContent.includes('license history'));
     await delay(300); assert.ok(httpErrors.includes('409 /api/employees/1'));
+  });
+  await check('software with license history cannot be deleted', async () => {
+    await goto('/software'); await waitFor(() => !!document.querySelector('button[aria-label="Delete Synthetic QA Software"]'));
+    await run(() => document.querySelector('button[aria-label="Delete Synthetic QA Software"]').click());
+    await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    await clickButton('Delete software');
+    await waitFor(() => document.querySelector('[role="alert"]')?.textContent.includes('license history'));
+    assert.ok(httpErrors.some(item => item.startsWith('409 /api/software/')));
   });
   await check('admin role change applies after viewer refresh', async () => {
     await goto('/role-management'); await waitFor(() => document.body.innerText.includes('viewer@seatwatch.test.invalid'));
@@ -294,8 +319,15 @@ try {
     await clickButton('Save'); await clickButton('Confirm Change');
     await waitFor(() => [...document.querySelectorAll('tr')].some(e => e.textContent.includes('viewer@seatwatch.test.invalid') && e.textContent.includes('manager')));
     await run((token) => { localStorage.setItem('auth_token', token); }, viewerToken);
-    await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add Employee'));
+    await goto('/employees'); await waitFor(() => document.body.innerText.includes('Add employee'));
     assert.equal((await request('/admin/users')).status, 403);
+  });
+  await check('isolated management fixtures cover long labels and price edges', async () => {
+    const longName = `Synthetic ${'Very Long Employee Name '.repeat(3)}`.trim();
+    const longEmail = `${'long.employee.address.'.repeat(5)}qa@seatwatch.test.invalid`;
+    assert.equal((await request('/employees', 'POST', { name: longName, email: longEmail })).status, 201);
+    assert.equal((await request('/software', 'POST', { name: `Synthetic ${'Long Product Name '.repeat(5)}`.trim(), category: 'Long category label for layout verification', price_per_seat: 99999999.99 })).status, 201);
+    assert.equal((await request('/software', 'POST', { name: 'Synthetic Zero Price Product', category: 'QA', price_per_seat: 0 })).status, 201);
   });
   for (const width of [390, 768, 1024, 1440]) {
     await check(`${width}px viewport renders landing and management`, async () => {
@@ -308,16 +340,39 @@ try {
         if (path === '/dashboard') {
           await waitFor(() => !!document.querySelector('[aria-label="Monthly spending by category"]'));
           assert.ok(await run(() => !!document.querySelector('h1') && document.querySelector('h1').textContent === 'Overview'));
-          assert.ok(await run(() => document.querySelectorAll('.sw-dashboard__table-panel').length === 2));
+          await waitFor(() => document.querySelectorAll('.sw-dashboard__table-panel').length === 2);
           assert.ok(await run(() => [...document.querySelectorAll('.sw-dashboard__text-link')].every(a => a.getAttribute('href') === '/licenses')));
           assert.ok(await run(() => [...document.querySelectorAll('.sw-dashboard__table-scroll')].every(e => e.scrollWidth >= e.clientWidth)));
-          const screenshotDir = resolve('../frontend/qa-screenshots');
-          await mkdir(screenshotDir, { recursive: true });
-          const layout = await send('Page.getLayoutMetrics');
-          const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
-            clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
-          await writeFile(join(screenshotDir, `task08b-dashboard-${width}.png`), Buffer.from(shot.data, 'base64'));
         }
+      }
+    });
+  }
+  for (const width of [390, 768, 1024, 1440]) {
+    await check(`${width}px employee and software management layout`, async () => {
+      await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
+      for (const path of ['/employees', '/software']) {
+        await goto(path);
+        try { await waitFor(() => document.querySelector('.sw-management__header h1')?.textContent === (location.pathname === '/employees' ? 'Employees' : 'Software') && !!document.querySelector('.sw-management__table')); }
+        catch { throw new Error(`${path} did not render table: ${(await run(() => document.body.innerText)).slice(0, 450)}`); }
+        const overflow = await run(() => document.documentElement.scrollWidth - innerWidth);
+        assert.ok(overflow <= 2, `${path} overflows by ${overflow}px`);
+        assert.ok(await run(() => document.querySelector('.sw-management__table-scroll').scrollWidth >= document.querySelector('.sw-management__table-scroll').clientWidth));
+        const screenshotDir = resolve('../frontend/qa-screenshots');
+        await mkdir(screenshotDir, { recursive: true });
+        const layout = await send('Page.getLayoutMetrics');
+        const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
+          clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
+        await writeFile(join(screenshotDir, `task08c-${path.slice(1)}-${width}.png`), Buffer.from(shot.data, 'base64'));
+        await run(() => [...document.querySelectorAll('button')].find(button => button.textContent.trim() === (location.pathname === '/employees' ? 'Add employee' : 'Add software')).click());
+        await waitFor(() => !!document.querySelector('[role="dialog"]'));
+        assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
+        assert.ok(await run(() => document.querySelector('[role="dialog"]').getBoundingClientRect().height <= innerHeight));
+        if (width === 390) {
+          const dialogShot = await send('Page.captureScreenshot', { format: 'png' });
+          await writeFile(join(screenshotDir, `task08c-${path.slice(1)}-dialog-390.png`), Buffer.from(dialogShot.data, 'base64'));
+        }
+        await run(() => document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+        await waitFor(() => !document.querySelector('[role="dialog"]'));
       }
     });
   }

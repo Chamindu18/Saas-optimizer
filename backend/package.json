@@ -10,7 +10,8 @@
     "test": "node --test test/accountSecurity.test.js test/employeeWorkflow.test.js",
     "test:integration:postgres": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runPostgresIntegration.ps1",
     "migrate": "node migrations/runMigration.js",
-    "seed:admin": "node scripts/seedAdmin.js"
+    "seed:admin": "node scripts/seedAdmin.js",
+    "seed:demo": "node scripts/seedDemo.js"
   },
   "keywords": [
     "saas",

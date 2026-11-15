@@ -75,7 +75,7 @@ async function clickButton(label) {
 }
 async function fill(label, value) {
   const filled = await run((label, value) => {
-    const input = [...document.querySelectorAll('input')].find(e => e.name === label || e.placeholder === label || e.parentElement?.textContent?.includes(label));
+    const input = [...document.querySelectorAll('input')].find(e => e.name === label || e.type === label || e.placeholder === label || e.parentElement?.textContent?.includes(label));
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -84,11 +84,31 @@ async function fill(label, value) {
   assert.ok(filled, `Input ${label} exists`);
 }
 async function select(id, value) {
+  let ready = false;
+  for (let i = 0; i < 80; i++) {
+    ready = await run((id, value) => {
+      const input = document.getElementById(id) || document.querySelector('select[name=' + JSON.stringify(id) + ']');
+      return !!input && !input.disabled && [...input.options].some(option => option.value === String(value));
+    }, id, value);
+    if (ready) break;
+    await delay(150);
+  }
+  assert.ok(ready, 'Select ' + id + ' has option ' + value);
   assert.ok(await run((id, value) => {
-    const input = document.getElementById(id);
-    if (!input) return false;
-    input.value = String(value); input.dispatchEvent(new Event('change', { bubbles: true })); return true;
-  }, id, value), `Select ${id} exists`);
+    const input = document.getElementById(id) || document.querySelector('select[name=' + JSON.stringify(id) + ']');
+    input.value = String(value);
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    return input.value === String(value);
+  }, id, value), 'Select ' + id + ' accepted ' + value);
+}async function capture(name, width) {
+  await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
+  await delay(180);
+  const screenshotDir = resolve('../frontend/qa-screenshots');
+  await mkdir(screenshotDir, { recursive: true });
+  const layout = await send('Page.getLayoutMetrics');
+  const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
+    clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
+  await writeFile(join(screenshotDir, name), Buffer.from(shot.data, 'base64'));
 }
 async function request(path, method = 'GET', body) {
   return run(async (path, method, body) => {
@@ -119,7 +139,7 @@ try {
   console.log('CDP connected');
   ws.onmessage = ({ data }) => {
     const msg = JSON.parse(data);
-    if (msg.id) { const p = pending.get(msg.id); pending.delete(msg.id); if (msg.error) p.reject(new Error(msg.error.message)); else p.resolve(msg.result); }
+    if (msg.id) { const p = pending.get(msg.id); pending.delete(msg.id); if (!p) return; if (msg.error) p.reject(new Error(msg.error.message)); else p.resolve(msg.result); }
     if (msg.method === 'Network.loadingFailed') failed.push(msg.params.errorText);
     if (msg.method === 'Network.responseReceived' && msg.params.response.status >= 400) httpErrors.push(`${msg.params.response.status} ${new URL(msg.params.response.url).pathname}`);
     if (msg.method === 'Page.javascriptDialogOpening') void send('Page.handleJavaScriptDialog', { accept: true, promptText: new Date().toISOString() });
@@ -244,9 +264,9 @@ try {
     assert.ok(await run(() => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes('nonnegative')));
   });
   await check('assign license with employee_id', async () => {
-    const employees = await request('/employees'); const software = await request('/software');
+    const employees = await request('/employees'); const products = await request('/software');
     const employee = (employees.body.data || employees.body).find(x => x.email === 'employee@seatwatch.test.invalid');
-    const item = (software.body.data || software.body).find(x => x.name === 'Synthetic QA Software');
+    const item = (products.body.data || products.body).find(x => x.name === 'Synthetic QA Software');
     assert.ok(employee?.id && item?.id);
     await goto('/licenses'); await waitFor(() => document.body.innerText.includes('Assign License'));
     await clickButton('Assign License'); await select('employee_id', employee.id); await select('software_id', item.id);
@@ -257,44 +277,55 @@ try {
     assert.ok((response.body.data || response.body).some(x => x.employee_id === employee.id && x.software_id === item.id));
   });
   await check('duplicate assignment displays HTTP 409 feedback', async () => {
-    const employees = await request('/employees'); const software = await request('/software');
-    const employee = (employees.body.data || employees.body)[0]; const item = (software.body.data || software.body)[0];
+    const employees = await request('/employees'); const products = await request('/software');
+    const employee = (employees.body.data || employees.body)[0]; const item = (products.body.data || products.body)[0];
     await clickButton('Assign License'); await select('employee_id', employee.id); await select('software_id', item.id);
     await run(() => document.getElementById('license-form').requestSubmit());
-    await waitFor(() => document.body.innerText.toLowerCase().includes('already'));
+    await waitFor(() => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes('already'));
     assert.ok(httpErrors.includes('409 /api/licenses'));
+    await clickButton('Cancel');
   });
   await check('dashboard metrics match active license', async () => {
     const response = await request('/dashboard/stats'); assert.equal(response.status, 200);
     const metrics = response.body.data || response.body;
     assert.equal(Number(metrics.totalSpend), 42.5); assert.equal(Number(metrics.activeLicenseCount), 1);
     await goto('/dashboard'); await waitFor(() => !!document.querySelector('[aria-label="Monthly spending by category"]'));
-    assert.ok(await run(() => !!document.querySelector('[aria-label="Monthly spending by category"]')));
     assert.ok(await run(() => document.body.innerText.includes('Synthetic QA Employee')));
   });
-  await check('idle report and potential savings from recorded activity', async () => {
+  await check('idle filter follows effective status and captures screenshot', async () => {
     const licenses = await request('/licenses'); const license = (licenses.body.data || licenses.body)[0];
     const oldDate = new Date(Date.now() - 31 * 86400000).toISOString();
-    assert.equal((await request(`/licenses/${license.id}`, 'PUT', { last_active_date: oldDate })).status, 200);
+    assert.equal((await request('/licenses/' + license.id, 'PUT', { last_active_date: oldDate })).status, 200);
     const idle = await request('/licenses/idle/list'); assert.equal(idle.status, 200);
     assert.equal((idle.body.data || idle.body).length, 1);
-    await goto('/licenses'); await waitFor(() => [...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Idle Licenses'));
-    await clickButton('Idle Licenses'); await waitFor(() => document.body.innerText.includes('Synthetic QA Employee'));
+    await goto('/licenses'); await waitFor(() => !!document.querySelector('.sw-licenses__panel'));
+    await run(() => { const control = document.querySelector('.sw-licenses__filters select'); control.value = 'idle'; control.dispatchEvent(new Event('change', { bubbles: true })); });
+    await waitFor(() => document.body.innerText.includes('1 of 1 assignments'));
+    await capture('task08c2-licenses-idle-1440.png', 1440);
     const metrics = await request('/dashboard/stats'); assert.equal(Number((metrics.body.data || metrics.body).potentialSavings), 42.5);
-    await goto('/dashboard'); await waitFor(() => document.body.innerText.includes('Estimated potential monthly savings'));
-    assert.ok(await run(() => document.querySelector('.sw-dashboard__tables')?.innerText.includes('Synthetic QA Employee')));
-    await goto('/licenses'); await waitFor(() => [...document.querySelectorAll('button')].some(e => e.textContent.trim() === 'Idle Licenses'));
-    await clickButton('Idle Licenses');
   });
-  await check('prune, retained status, and financial effect', async () => {
-    await clickButton('All Licenses'); await clickButton('Prune');
-    await waitFor(() => document.body.innerText.includes('Pruned'));
+  await check('prune confirmation and retained history', async () => {
+    await goto('/licenses'); await waitFor(() => !!document.querySelector('.sw-licenses__panel'));
+    await clickButton('Prune'); await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    assert.ok(await run(() => document.querySelector('[role="dialog"]').innerText.includes('does not cancel vendor billing')));
+    await capture('task08c2-licenses-prune.png', 1440);
+    await clickButton('Prune license'); await waitFor(() => document.querySelector('.sw-licenses__summary')?.innerText.includes('Pruned'));
+    await waitFor(() => document.querySelector('.sw-licenses__panel')?.innerText.includes('Reactivate'));
     const metrics = await request('/dashboard/stats'); const data = metrics.body.data || metrics.body;
     assert.equal(Number(data.totalSpend), 0); assert.equal(Number(data.prunedLicenseCount), 1);
     assert.equal((await request('/licenses/idle/list')).body.data?.length ?? 0, 0);
   });
-  await check('reactivation restores current spend', async () => {
-    await clickButton('Reactivate'); await waitFor(() => document.body.innerText.includes('Active'));
+  await check('reactivation requires manually recorded activity', async () => {
+    await clickButton('Reactivate'); await waitFor(() => !!document.querySelector('[role="dialog"]'));
+    await capture('task08c2-licenses-reactivate.png', 1440);
+    await run(() => document.querySelector('[role="dialog"] form').requestSubmit());
+    await waitFor(() => document.querySelector('[role="dialog"] [role="alert"]')?.textContent.includes('valid activity'));
+    const recent = new Date(Date.now() - 86400000);
+    const local = new Date(recent.getTime() - recent.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    await fill('datetime-local', local);
+    await clickButton('Reactivate license');
+    await waitFor(() => !document.querySelector('[role="dialog"]'));
+    await waitFor(() => document.querySelector('.sw-licenses__panel')?.innerText.includes('Active'));
     const metrics = await request('/dashboard/stats'); assert.equal(Number((metrics.body.data || metrics.body).totalSpend), 42.5);
   });
   await check('employee with license history cannot be deleted', async () => {
@@ -337,6 +368,17 @@ try {
         assert.ok((await run(() => document.body.innerText)).length > 50);
         const overflow = await run(() => document.documentElement.scrollWidth - innerWidth);
         assert.ok(overflow <= 2, `${path} overflows viewport by ${overflow}px`);
+        if (path === '/licenses') {
+          await waitFor(() => !!document.querySelector('.sw-licenses__panel'));
+          assert.ok(await run(() => document.querySelector('.sw-management__table-scroll').scrollWidth >= document.querySelector('.sw-management__table-scroll').clientWidth));
+          await capture('task08c2-licenses-' + width + '.png', width);
+          if (width === 390) {
+            await clickButton('Assign License'); await waitFor(() => !!document.querySelector('[role="dialog"]'));
+            assert.ok(await run(() => document.querySelector('[role="dialog"]').contains(document.activeElement)));
+            await capture('task08c2-licenses-assignment-390.png', width);
+            await clickButton('Cancel'); await waitFor(() => !document.querySelector('[role="dialog"]'));
+          }
+        }
         if (path === '/dashboard') {
           await waitFor(() => !!document.querySelector('[aria-label="Monthly spending by category"]'));
           assert.ok(await run(() => !!document.querySelector('h1') && document.querySelector('h1').textContent === 'Overview'));

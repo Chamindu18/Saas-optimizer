@@ -1,0 +1,39 @@
+.sw-licenses__summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--sw-space-4); }
+.sw-licenses__summary > div { display: grid; gap: var(--sw-space-1); padding: var(--sw-space-4); background: var(--sw-surface); border: 1px solid var(--sw-border); border-radius: var(--sw-radius-lg); }
+.sw-licenses__summary span { color: var(--sw-muted); font-size: 12px; font-weight: 600; }
+.sw-licenses__summary strong { color: var(--sw-text); font-size: 25px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.sw-licenses__summary small { color: var(--sw-muted); font-size: 12px; line-height: 1.4; }
+.sw-licenses__toolbar { align-items: end; }
+.sw-licenses__filters { display: flex; align-items: end; flex-wrap: wrap; gap: var(--sw-space-3); }
+.sw-licenses__filters .sw-management__search select { width: 140px; min-height: var(--sw-control-height); padding: 8px 12px; border: 1px solid var(--sw-border); border-radius: var(--sw-radius-md); background: var(--sw-surface); color: var(--sw-text); font: inherit; font-size: 14px; }
+.sw-licenses__panel .sw-management__table { min-width: 1040px; }
+.sw-licenses__panel .sw-management__table .sw-licenses__person { width: 20%; }
+.sw-licenses__panel .sw-management__table .sw-licenses__software { width: 18%; }
+.sw-licenses__panel .sw-management__table .sw-licenses__cost { width: 13%; text-align: right; font-variant-numeric: tabular-nums; }
+.sw-licenses__panel .sw-management__table .sw-licenses__status { width: 10%; }
+.sw-licenses__panel .sw-management__table .sw-licenses__date { width: 13%; }
+.sw-licenses__panel .sw-management__table .sw-licenses__actions { width: 135px; min-width: 135px; text-align: right; white-space: nowrap; }
+.sw-licenses__identity { display: grid; gap: 2px; min-width: 0; }
+.sw-licenses__identity strong { font-weight: 650; }
+.sw-licenses__identity small { color: var(--sw-muted); font-size: 12px; font-weight: 400; overflow-wrap: anywhere; }
+.sw-licenses__field { display: grid; gap: 6px; color: var(--sw-text); font-size: 13px; font-weight: 600; }
+.sw-licenses__field :is(input, select) { width: 100%; min-height: var(--sw-control-height); padding: 8px 12px; border: 1px solid var(--sw-border); border-radius: var(--sw-radius-md); background: var(--sw-surface); color: var(--sw-text); font: inherit; font-size: 14px; }
+.sw-licenses__field :is(input, select)[aria-invalid=true] { border-color: var(--sw-danger); }
+.sw-licenses__field span { color: var(--sw-danger); font-size: 12px; font-weight: 400; }
+.sw-licenses__form-copy { margin: 0; color: var(--sw-muted); font-size: 14px; line-height: 1.5; }
+@media (max-width: 900px) {
+  .sw-licenses__panel .sw-management__table .sw-licenses__person { width: 210px; }
+  .sw-licenses__panel .sw-management__table .sw-licenses__software { width: 170px; }
+  .sw-licenses__panel .sw-management__table .sw-licenses__cost { width: 140px; }
+  .sw-licenses__panel .sw-management__table .sw-licenses__status { width: 90px; }
+  .sw-licenses__panel .sw-management__table .sw-licenses__date { width: 140px; }
+  .sw-licenses__panel .sw-management__table .sw-licenses__actions { position: sticky; right: 0; z-index: 1; width: 135px; min-width: 135px; border-left: 1px solid var(--sw-border); }
+}
+@media (max-width: 767px) {
+  .sw-licenses__summary { grid-template-columns: 1fr; gap: var(--sw-space-2); }
+  .sw-licenses__summary > div { grid-template-columns: 1fr auto; align-items: baseline; }
+  .sw-licenses__summary small { grid-column: 1 / -1; }
+  .sw-licenses__filters { align-items: stretch; }
+  .sw-licenses__filters .sw-management__search, .sw-licenses__filters .sw-management__search :is(input, select) { width: 100%; }
+  .sw-licenses__filters .sw-button { min-height: var(--sw-control-height-touch); }
+}

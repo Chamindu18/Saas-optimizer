@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { vi } from 'vitest';
 import { useAsync } from './useAsync';
 
 test('inline request callback does not refetch on rerender', async () => {
-  const request = jest.fn(async () => ['employee']);
+  const request = vi.fn(async () => ['employee']);
   function Fixture() {
     const [count, setCount] = useState(0);
     const { data, isLoading } = useAsync(() => request());

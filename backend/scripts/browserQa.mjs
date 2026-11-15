@@ -6,9 +6,19 @@ import { spawn } from 'node:child_process';
 import app from '../app.js';
 import pool from '../config/db.js';
 
-const buildDir = resolve('../frontend/build');
+const buildDir = resolve('../frontend/dist');
 const site = createServer(async (req, res) => {
   const pathname = new URL(req.url, 'http://localhost:3000').pathname;
+  if (pathname.startsWith('/api/')) {
+    const response = await fetch(`http://127.0.0.1:5000${req.url}`, {
+      method: req.method,
+      headers: { authorization: req.headers.authorization || '', 'content-type': req.headers['content-type'] || 'application/json' },
+      ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: req, duplex: 'half' } : {}),
+    });
+    res.writeHead(response.status, { 'content-type': response.headers.get('content-type') || 'application/json' });
+    res.end(Buffer.from(await response.arrayBuffer()));
+    return;
+  }
   let file = resolve(buildDir, `.${pathname}`);
   if (!file.startsWith(buildDir) || !(await stat(file).catch(() => null))?.isFile()) file = join(buildDir, 'index.html');
   const mime = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon' };

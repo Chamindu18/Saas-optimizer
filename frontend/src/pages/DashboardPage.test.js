@@ -1,12 +1,13 @@
 import React from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import DashboardPage from './DashboardPage';
 import { dashboardAPI, licenseAPI } from '../services/api';
 
-jest.mock('../services/api', () => ({
-  dashboardAPI: { getStats: jest.fn() },
-  licenseAPI: { getAllLicenses: jest.fn() },
+vi.mock('../services/api', () => ({
+  dashboardAPI: { getStats: vi.fn() },
+  licenseAPI: { getAllLicenses: vi.fn() },
   apiErrorMessage: error => error.message,
 }));
 

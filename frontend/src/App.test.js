@@ -1,13 +1,14 @@
 import { render, screen } from '@testing-library/react';
+import { vi } from 'vitest';
 import App from './App';
+import { authAPI } from './services/api';
 
-jest.mock('./pages/LoginPage', () => () => <h1>Login route</h1>);
-jest.mock('./pages/DashboardPage', () => () => <h1>Dashboard route</h1>);
+vi.mock('./pages/LoginPage', () => ({ default: () => <h1>Login route</h1> }));
+vi.mock('./pages/DashboardPage', () => ({ default: () => <h1>Dashboard route</h1> }));
 
-jest.mock('./services/api', () => ({
-  __esModule: true,
-  default: { get: jest.fn(() => Promise.reject(new Error('Unexpected API request'))) },
-  authAPI: { me: jest.fn(async () => ({ id: 1, name: 'Test User', email: 'test@example.com', role: 'viewer' })) },
+vi.mock('./services/api', () => ({
+  default: { get: vi.fn(() => Promise.reject(new Error('Unexpected API request'))) },
+  authAPI: { me: vi.fn(async () => ({ id: 1, name: 'Test User', email: 'test@example.com', role: 'viewer' })) },
 }));
 
 beforeEach(() => {
@@ -39,7 +40,6 @@ test('renders the protected dashboard for a stored authenticated user', async ()
 });
 
 test('rejects a stored token when session restoration fails', async () => {
-  const { authAPI } = require('./services/api');
   authAPI.me.mockRejectedValueOnce(new Error('Expired token'));
   window.localStorage.setItem('auth_token', 'expired');
   window.history.pushState({}, '', '/dashboard');

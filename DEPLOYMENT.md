@@ -18,7 +18,7 @@ Backend variables:
 - `FRONTEND_URL`
 
 Frontend variables:
-- `REACT_APP_API_URL`
+- `VITE_API_URL`
 
 ## 2. Database Setup
 
@@ -65,7 +65,7 @@ If the host supports a build step, use the same install and migration commands b
 
 ## 4. Frontend Deployment
 
-Set `REACT_APP_API_URL` to the deployed backend API base URL, for example:
+Set `VITE_API_URL` to the deployed backend API base URL before building, for example:
 
 ```bash
 https://your-backend.example.com/api
@@ -79,7 +79,7 @@ npm install
 npm run build
 ```
 
-Publish the generated `build/` folder.
+Publish the generated `dist/` folder. Configure the static host to serve `index.html` for client-side routes. If `VITE_API_URL` is omitted, proxy `/api` to the backend on the same origin.
 
 ## 5. CORS
 

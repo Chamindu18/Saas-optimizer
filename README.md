@@ -45,7 +45,7 @@ npm start
 ```bash
 cd frontend
 npm install
-npm start
+npm run dev
 ```
 
 ## Environment Variables
@@ -60,7 +60,7 @@ Backend:
 
 Frontend:
 
-- `REACT_APP_API_URL`
+- `VITE_API_URL` (public API base URL; defaults to `/api`)
 
 ## Demo Credentials
 

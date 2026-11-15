@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { clearAuth, getToken } from '../utils/auth';
 
-const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 // Create an axios instance with the backend API base URL
 // This is convenient so we don't have to repeat the full URL in every API call

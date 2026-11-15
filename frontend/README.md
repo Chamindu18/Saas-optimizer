@@ -1,70 +1,21 @@
-# Getting Started with Create React App
+# SeatWatch frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+React 19 and React Router 7, built with Vite. Use Node.js 22.12+ (Node 22 LTS recommended) and npm.
 
-## Available Scripts
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-In the project directory, you can run:
+The development server runs at `http://localhost:5173`. Start the Express backend on port 5000; Vite forwards `/api` requests to it. For cross-origin direct API requests, add the frontend origin to the backend `FRONTEND_URL` setting.
 
-### `npm start`
+```bash
+npm test          # Vitest and jsdom, one run
+npm run build     # production assets in dist/
+npm run preview   # serve the production build locally
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+The public API base URL is `VITE_API_URL`, set in `frontend/.env` or in the build environment. It defaults to `/api`, which requires the production host to forward `/api` to Express. For a separately hosted backend, set `VITE_API_URL=https://your-backend.example.com/api` before `npm run build` and configure the backend `FRONTEND_URL` for CORS. Vite embeds this value at build time; rebuild after changing it. Never use `VITE_` for `JWT_SECRET`, `DATABASE_URL`, admin credentials, or other backend secrets.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
-
-### `npm test`
-
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+The HTML entry is `index.html` at the frontend root. Static files remain in `public/`; production hosts must serve `index.html` for React Router paths. The existing CSS and page components are unchanged. CRA's `REACT_APP_API_URL`, `react-scripts`, Jest mappings, and `build/` output are no longer used. Use `npm run dev` in place of the former CRA development command (`npm start` remains an alias).

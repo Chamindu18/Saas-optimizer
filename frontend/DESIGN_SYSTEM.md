@@ -24,3 +24,11 @@ The active management modal keeps its old props while using the new Dialog inter
 ## Legacy compatibility and next work
 
 `index.css`, `design-system.css`, the old `components/ui` and `components/common` files, and page CSS remain because live routes still import them. Obsolete `components/styles/Sidebar.css` and `Header.css` are left in place pending a verified cleanup. Task 08B can redesign dashboard content using real statistics. Task 08C should migrate page tables, repeated row actions, remaining dialogs, legacy tokens, and page-specific CSS, then remove unused component/CSS files after checking consumers. The current dashboard cards and management-page spacing are intentionally still legacy.
+
+## Public authentication pages (Task 08C-5)
+
+Login and registration share `src/pages/AuthShell.jsx` and scoped `src/pages/styles/AuthExperience.css`. The shell uses the existing `--sw-*` canvas, surface, text, accent, border, focus, danger, and radius tokens. A compact header, centered form, and small footer replace the old half-screen promotional panels. The pages retain their own validation and auth context calls.
+
+The old submit buttons used `components/ui/Button.jsx`, which emits `btn btn-primary`. The active `App.css` `.btn-primary` background references undefined `--color-accent`, so its intended fill is discarded; the legacy registration CSS also used old variables and a full-height mobile panel. Authentication now uses a scoped `sw-auth__submit` style with an explicit tokenized background and white text. The legacy button remains unchanged for other consumers.
+
+Authentication pages import `components/ui/Input.jsx` explicitly. An extensionless import had resolved to `Input.js`, a different legacy component that lacks a password toggle. The JSX input associates labels and error descriptions, announces field errors, and offers a keyboard-accessible visibility button. Form errors use text in an alert region; no HTML insertion is used. Registration explains that public signup provides viewer access to the current shared organizational workspace and that an admin manages change permissions. It does not imply workspace isolation or a new subscription. The backend still controls authentication and authorization.

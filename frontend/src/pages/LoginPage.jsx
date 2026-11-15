@@ -1,192 +1,61 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import Button from '../components/ui/Button';
-import Input from '../components/ui/Input';
-import Alert from '../components/ui/Alert';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import Input from '../components/ui/Input.jsx';
 import { useToast } from '../components/ui/ToastContainer';
 import { useAuth } from '../context/AuthContext';
 import { apiErrorMessage } from '../services/api';
-import '../pages/styles/LoginPage.css';
+import AuthShell from './AuthShell';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { addToast } = useToast();
   const { login } = useAuth();
-
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState(null);
-
   const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const next = {};
+    if (!formData.email.trim()) next.email = 'Email is required';
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) next.email = 'Please enter a valid email address';
+    if (!formData.password) next.password = 'Password is required';
+    else if (formData.password.length < 6) next.password = 'Password must be at least 6 characters';
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Clear error for this field when user starts typing
-    if (errors[name]) {
-      setErrors((prev) => ({
-        ...prev,
-        [name]: null,
-      }));
-    }
-  };
-
-  const handleLogin = async (e) => {
-    e.preventDefault();
+  const handleChange = ({ target: { name, value } }) => {
+    setFormData(previous => ({ ...previous, [name]: value }));
+    setErrors(previous => ({ ...previous, [name]: null }));
     setApiError(null);
-
-    if (!validateForm()) {
-      return;
-    }
-
+  };
+  const handleLogin = async event => {
+    event.preventDefault();
+    if (loading) return;
+    setApiError(null);
+    if (!validateForm()) return;
     setLoading(true);
     try {
       await login(formData.email, formData.password);
-
-      addToast('Welcome back!', {
-        type: 'success',
-        duration: 2000,
-      });
-
-      // Redirect to dashboard or original page
+      addToast('Welcome back!', { type: 'success', duration: 2000 });
       const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
-    } catch (err) {
-      const message = apiErrorMessage(err);
+    } catch (error) {
+      const message = apiErrorMessage(error);
       setApiError(message);
-      addToast(message, {
-        type: 'error',
-      });
-    } finally {
-      setLoading(false);
-    }
+      addToast(message, { type: 'error' });
+    } finally { setLoading(false); }
   };
-
-  return (
-    <div className="login-container">
-      <div className="login-box">
-        {/* Header */}
-        <div className="login-header">
-          <div className="login-logo">
-            <div className="logo-icon">📊</div>
-            <div className="logo-text">
-              <h1 className="logo-title">SeatWatch</h1>
-              <p className="logo-subtitle">License management MVP</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Form Section */}
-        <div className="login-form-section">
-          <div className="login-form-header">
-            <h2>Sign In</h2>
-            <p>Enter your credentials to access your workspace</p>
-          </div>
-
-          {apiError && (
-            <Alert
-              type="danger"
-              message={apiError}
-              onClose={() => setApiError(null)}
-            />
-          )}
-
-          <form onSubmit={handleLogin} className="login-form">
-            <Input
-              label="Email Address"
-              type="email"
-              name="email"
-              placeholder="you@company.com"
-              value={formData.email}
-              onChange={handleChange}
-              error={!!errors.email}
-              errorMessage={errors.email}
-              disabled={loading}
-              required
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              name="password"
-              placeholder="••••••••"
-              value={formData.password}
-              onChange={handleChange}
-              error={!!errors.password}
-              errorMessage={errors.password}
-              disabled={loading}
-              required
-            />
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              disabled={loading}
-              loading={loading}
-              className="login-submit-btn"
-            >
-              Sign In
-            </Button>
-          </form>
-
-        </div>
-
-        {/* Footer */}
-        <div className="login-footer">
-          <p>Need help? Contact your administrator</p>
-        </div>
-      </div>
-
-      {/* Right Side - Info Panel */}
-      <div className="login-info-panel">
-        <div className="login-info-content">
-          <h2>Manage Your SaaS Portfolio</h2>
-          <ul className="login-info-list">
-            <li>
-              <span className="info-icon">✓</span>
-              <span>Track all licenses in one place</span>
-            </li>
-            <li>
-              <span className="info-icon">✓</span>
-              <span>Flag idle licenses from recorded activity dates</span>
-            </li>
-            <li>
-              <span className="info-icon">✓</span>
-              <span>Calculate potential savings</span>
-            </li>
-            <li>
-              <span className="info-icon">✓</span>
-              <span>Mark license assignments as pruned</span>
-            </li>
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
+  return <AuthShell>
+    <p className="sw-auth__eyebrow">SeatWatch workspace</p>
+    <h1>Welcome back</h1>
+    <p className="sw-auth__intro">Sign in to review your organization's software license records.</p>
+    <form className="sw-auth__form" onSubmit={handleLogin} noValidate aria-busy={loading}>
+      <Input label="Email" type="email" name="email" autoComplete="username" value={formData.email} onChange={handleChange} error={!!errors.email} errorMessage={errors.email} disabled={loading} required />
+      <Input label="Password" type="password" name="password" autoComplete="current-password" value={formData.password} onChange={handleChange} error={!!errors.password} errorMessage={errors.password} disabled={loading} showPasswordToggle required />
+      {apiError && <p className="sw-auth__error" role="alert">{apiError}</p>}
+      <button className="sw-auth__submit" type="submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
+    </form>
+    <p className="sw-auth__alternate">Need access? <Link to="/register">Create viewer account</Link></p>
+  </AuthShell>;
 }

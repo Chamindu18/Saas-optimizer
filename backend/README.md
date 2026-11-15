@@ -2,6 +2,12 @@
 
 Welcome! This is the backend API for the **SaaS Management & Optimization Platform**. Follow these steps to get your server running.
 
+## Dependency security pins
+
+The `package-lock.json` file records the tested dependency tree. Include it with dependency changes and use `npm ci` for reproducible installs.
+
+Express 4.22.3 still requests vulnerable `body-parser` and `proxy-addr` patch ranges. `package.json` therefore overrides only those transitive packages to `body-parser@1.20.9` ([GHSA-27r3-jxmh-p828](https://github.com/advisories/GHSA-27r3-jxmh-p828)) and `proxy-addr@2.0.8` ([CVE-2026-90711](https://github.com/advisories/GHSA-jqcg-44mw-7w3h)). Remove each override once an Express 4 release requests the patched version, after rerunning the backend tests and isolated PostgreSQL integration.
+
 ---
 
 ## 📋 Table of Contents

@@ -8,6 +8,10 @@ The `package-lock.json` file records the tested dependency tree. Include it with
 
 Express 4.22.3 still requests vulnerable `body-parser` and `proxy-addr` patch ranges. `package.json` therefore overrides only those transitive packages to `body-parser@1.20.9` ([GHSA-27r3-jxmh-p828](https://github.com/advisories/GHSA-27r3-jxmh-p828)) and `proxy-addr@2.0.8` ([CVE-2026-90711](https://github.com/advisories/GHSA-jqcg-44mw-7w3h)). Remove each override once an Express 4 release requests the patched version, after rerunning the backend tests and isolated PostgreSQL integration.
 
+The login route limits each client IP to 10 failed attempts in 15 minutes using `express-rate-limit` 8. A 429 response carries a generic JSON error and `Retry-After` seconds. The memory store resets on restart and is local to one process. `TRUSTED_PROXY_CIDRS` must list only verified proxy addresses; the proxy must overwrite incoming `X-Forwarded-For`.
+
+The remaining backend audit finding is `node-cron` 3 → `uuid` 8 ([GHSA-w5hq-g745-h8pq](https://github.com/advisories/GHSA-w5hq-g745-h8pq)). The affected v3/v5/v6 UUID buffer API is not used by the cron scheduling path. A node-cron 4 change requires separate schedule and task lifecycle validation.
+
 ---
 
 ## 📋 Table of Contents

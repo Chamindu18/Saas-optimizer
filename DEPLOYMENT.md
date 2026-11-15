@@ -16,6 +16,7 @@ Backend variables:
 - `DATABASE_URL`
 - `JWT_SECRET`
 - `FRONTEND_URL`
+- `TRUSTED_PROXY_CIDRS` (only when a verified reverse proxy fronts the API)
 
 Frontend variables:
 - `VITE_API_URL`
@@ -61,6 +62,8 @@ If the host supports a build step, use the same install and migration commands b
 ### Important backend settings
 - Set `JWT_SECRET` to a long random value.
 - Set `FRONTEND_URL` to the final frontend domain.
+- Keep the API to one process for the MVP login limiter. It allows 10 failed login requests per client IP per 15 minutes and returns HTTP 429 with `Retry-After` seconds when exhausted. Successful responses are removed from the count. Counters reset on restart and are not shared across instances; users behind a NAT share the same quota.
+- Leave `TRUSTED_PROXY_CIDRS` unset when clients connect directly. Behind a proxy, set it to the exact proxy IP addresses or narrow CIDR ranges (comma-separated), and configure that proxy to replace incoming `X-Forwarded-For`. Do not expose the API through an untrusted proxy or trust every address. Confirm `req.ip` resolves to the client before launch.
 - Do not leave the fallback `.env` values in production.
 
 ## 4. Frontend Deployment

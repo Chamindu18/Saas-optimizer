@@ -210,7 +210,7 @@ try {
   await check('synthetic admin login', async () => {
     await fill('email', process.env.ADMIN_BOOTSTRAP_EMAIL);
     await fill('password', process.env.ADMIN_BOOTSTRAP_PASSWORD);
-    await clickButton('Sign In'); await waitFor(() => location.pathname === '/dashboard');
+    await clickButton('Sign in'); await waitFor(() => location.pathname === '/dashboard');
   });
   await check('admin management pages load', async () => {
     for (const path of ['/employees','/software','/licenses','/admin','/role-management','/audit-log']) {

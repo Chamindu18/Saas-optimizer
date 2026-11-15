@@ -314,10 +314,14 @@ The integration/browser harnesses are designed to use disposable, locally verifi
 - User-supplied SQL parameters are parameterized; database constraints preserve historical relationships.
 - The demo data is synthetic, but **real** seeded data is visible to all authorized viewer accounts because this is a shared organizational workspace.
 - Audit logging is **best effort** and not a complete, immutable compliance history.
-- The app has no invite/approval flow, password reset, email verification, login rate limiting, provider integrations, invoice reconciliation, currency setting, or multi-tenant data isolation established for release.
-- Remaining dependency advisories require continued assessment; a previous patch addressed the known Express parser and proxy-address issues, but that does not imply a vulnerability-free dependency tree.
+- The app has no invite/approval flow, password reset, email verification, provider integrations, invoice reconciliation, currency setting, or multi-tenant data isolation established for release.
+- `POST /api/auth/login` allows 10 failed attempts per client IP in 15 minutes; further attempts receive HTTP 429, a generic message, and `Retry-After` in seconds. Successful logins do not consume the quota. Shared NAT clients share a quota.
+- The limiter uses process memory: counters reset on restart and are not shared across replicas. Keep the API to one process for this MVP; distributed deployments need a shared store.
+- Express trusts forwarding headers only from explicitly configured proxy IPs/CIDRs. The reverse proxy must replace client-supplied `X-Forwarded-For`; see `DEPLOYMENT.md`.
+- The backend audit still reports the `node-cron` → `uuid` advisory. The vulnerable UUID v3/v5/v6 buffer API is not used by this scheduling path; a node-cron 4 upgrade needs separate scheduling compatibility review.
+- Seven-day JWTs and browser token storage remain a session risk if client-side script is compromised. Audit logging remains best effort.
 
-**Before public deployment:** Complete security and accessibility review, configure HTTPS and secret management, add login brute-force protection, and verify reverse-proxy/CORS behavior. Treat the local demo as an MVP, not a production security certification.
+**Before public deployment:** Complete security and accessibility review, configure HTTPS and secret management, and verify reverse-proxy/CORS behavior. Treat the local demo as an MVP, not a production security certification.
 
 ## Deployment considerations
 
@@ -345,7 +349,7 @@ The application has undergone incremental work on account security, employee/acc
 Additional work to prioritize:
 
 - Verify Login and the administrator-provided access screen against the same design system as the rest of the app.
-- Add login brute-force protection before exposing the shared workspace externally.
+- Review session lifetime, browser token storage, and distributed login throttling before exposing the shared workspace externally.
 - Complete keyboard, screen-reader, contrast, performance, and security release reviews.
 - Validate hosting configuration, API proxying, database backups, and environment isolation.
 

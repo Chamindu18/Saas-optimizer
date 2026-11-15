@@ -11,6 +11,7 @@
 import express from 'express';
 import authController from '../controllers/authController.js';
 import authMiddleware from '../middleware/auth.js';
+import { createLoginRateLimit } from '../middleware/loginRateLimit.js';
 
 const router = express.Router();
 
@@ -18,7 +19,7 @@ const router = express.Router();
 router.post('/register', authController.register);
 
 // POST /api/auth/login - Login user
-router.post('/login', authController.login);
+router.post('/login', createLoginRateLimit(), authController.login);
 router.get('/me', authMiddleware, authController.me);
 
 export default router;

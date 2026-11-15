@@ -15,6 +15,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { isIP } from 'node:net';
 import pool from './config/db.js';
 
 // Import routes
@@ -32,6 +33,19 @@ dotenv.config();
 
 // Initialize Express app
 const app = express();
+
+// Trust only explicitly named proxy IPs/CIDRs. Never trust arbitrary forwarding headers.
+const trustedProxies = process.env.TRUSTED_PROXY_CIDRS === undefined || process.env.TRUSTED_PROXY_CIDRS === ''
+  ? [] : process.env.TRUSTED_PROXY_CIDRS.split(',').map((value) => value.trim());
+for (const proxy of trustedProxies) {
+  const [address, prefix, extra] = proxy.split('/');
+  const family = isIP(address);
+  if (!family || extra !== undefined || (prefix !== undefined &&
+      (!/^\d+$/.test(prefix) || Number(prefix) === 0 || Number(prefix) > (family === 4 ? 32 : 128)))) {
+    throw new Error('TRUSTED_PROXY_CIDRS must contain only IP addresses or CIDR ranges');
+  }
+}
+if (trustedProxies.length) app.set('trust proxy', trustedProxies);
 
 // ============================================
 // DATABASE CONNECTION TEST

@@ -7,10 +7,17 @@ import app from '../app.js';
 import pool from '../config/db.js';
 
 const buildDir = resolve('../frontend/dist');
+const loopbackHost = '127.0.0.1';
+const sitePort = 3000;
+const apiPort = 5000;
+const cdpPort = 47891;
+const siteOrigin = `http://${loopbackHost}:${sitePort}`;
+const apiOrigin = `http://${loopbackHost}:${apiPort}`;
+const cdpOrigin = `http://${loopbackHost}:${cdpPort}`;
 const site = createServer(async (req, res) => {
-  const pathname = new URL(req.url, 'http://localhost:3000').pathname;
+  const pathname = new URL(req.url, siteOrigin).pathname;
   if (pathname.startsWith('/api/')) {
-    const response = await fetch(`http://127.0.0.1:5000${req.url}`, {
+    const response = await fetch(`${apiOrigin}${req.url}`, {
       method: req.method,
       headers: { authorization: req.headers.authorization || '', 'content-type': req.headers['content-type'] || 'application/json' },
       ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: req, duplex: 'half' } : {}),
@@ -25,11 +32,11 @@ const site = createServer(async (req, res) => {
   res.setHeader('Content-Type', mime[extname(file)] || 'application/octet-stream');
   res.end(await readFile(file));
 });
-const api = app.listen(5000, '127.0.0.1');
-site.listen(3000, '127.0.0.1');
+const api = app.listen(apiPort, loopbackHost);
+site.listen(sitePort, loopbackHost);
 const edge = spawn('C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', [
   '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
-  '--remote-debugging-port=47891', `--user-data-dir=${process.env.TEMP}\\seatwatch-edge-${Date.now()}`,
+  `--remote-debugging-port=${cdpPort}`, `--user-data-dir=${process.env.TEMP}\\seatwatch-edge-${Date.now()}`,
   'about:blank',
 ], { stdio: 'ignore', windowsHide: true });
 
@@ -62,7 +69,7 @@ async function waitFor(fn, timeout = 12000) {
   throw new Error('Timed out waiting for browser state');
 }
 async function goto(path) {
-  await send('Page.navigate', { url: `http://localhost:3000${path}` });
+  await send('Page.navigate', { url: `${siteOrigin}${path}` });
   await waitFor(() => document.readyState === 'complete');
 }
 async function clickButton(label) {
@@ -112,7 +119,7 @@ async function select(id, value) {
 }
 async function request(path, method = 'GET', body) {
   return run(async (path, method, body) => {
-    const response = await fetch(`http://localhost:5000/api${path}`, {
+    const response = await fetch(`/api${path}`, {
       method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('auth_token')}` },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
@@ -129,7 +136,7 @@ try {
   console.log('Local API and frontend ready');
   let target;
   for (let i = 0; i < 80; i++) {
-    try { target = (await (await fetch('http://127.0.0.1:47891/json/list')).json()).find(t => t.type === 'page' && t.url === 'about:blank'); if (target) break; } catch {}
+    try { target = (await (await fetch(`${cdpOrigin}/json/list`)).json()).find(t => t.type === 'page' && t.url === 'about:blank'); if (target) break; } catch {}
     await delay(150);
   }
   assert.ok(target, 'Headless Edge CDP target available');
@@ -173,7 +180,7 @@ try {
     await goto('/admin'); await waitFor(() => location.pathname === '/dashboard');
   });
   await check('viewer server mutation denied', async () => {
-    const status = await run(async () => (await fetch('http://localhost:5000/api/employees', { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${localStorage.getItem('auth_token')}`}, body:JSON.stringify({name:'Denied',email:'denied@test.invalid'}) })).status);
+    const status = await run(async () => (await fetch('/api/employees', { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${localStorage.getItem('auth_token')}`}, body:JSON.stringify({name:'Denied',email:'denied@test.invalid'}) })).status);
     assert.equal(status, 403);
   });
   await check('logout redirects protected route', async () => {

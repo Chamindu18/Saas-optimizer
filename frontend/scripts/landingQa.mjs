@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { resolve, join, extname } from 'node:path';
@@ -58,7 +59,7 @@ try {
     if (message.method === 'Network.responseReceived' && message.params.response.status >= 400) errors.push(`${message.params.response.status} ${message.params.response.url}`);
   });
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
-  const directory = resolve('qa-screenshots/landing');
+  const directory = resolve(process.env.SEATWATCH_QA_SCREENSHOTS_DIR || join(tmpdir(), 'seatwatch-browser-qa-screenshots'), 'landing');
   await mkdir(directory, { recursive: true });
   for (const width of [390, 768, 1024, 1440, 1680]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });

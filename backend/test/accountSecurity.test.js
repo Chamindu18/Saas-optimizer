@@ -8,6 +8,7 @@ import pool from '../config/db.js';
 import authRoutes from '../routes/auth.js';
 import userRoutes from '../routes/userRoutes.js';
 import adminRoutes from '../routes/adminRoutes.js';
+import softwareRoutes from '../routes/softwareRoutes.js';
 import { changeUserRole, deleteAccount } from '../services/accountMutations.js';
 
 const secret = 'local-test-secret-only';
@@ -30,6 +31,8 @@ const query = async (sql, params = []) => {
   if (/^(BEGIN|COMMIT|ROLLBACK)$/.test(statement)) return { rows: [] };
   if (/SELECT \* FROM users|RETURNING \*/i.test(statement)) throw new Error('Unsafe user projection');
   if (statement.startsWith('INSERT INTO audit_logs')) return { rows: [] };
+  if (statement.startsWith('SELECT * FROM software ORDER BY')) throw new Error('private database detail');
+  if (statement.startsWith('SELECT * FROM software WHERE id')) throw new Error('private database detail');
   if (statement.includes("FROM users WHERE role = 'admin' ORDER BY id FOR UPDATE")) {
     return { rows: [...users.values()].filter((u) => u.role === 'admin').map((u) => ({ id: u.id })) };
   }
@@ -86,6 +89,7 @@ before(async () => {
   app.use('/api/auth', authRoutes);
   app.use('/api/users', userRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/software', softwareRoutes);
   server = app.listen(0, '127.0.0.1');
   await once(server, 'listening');
 });
@@ -119,6 +123,14 @@ const request = async (method, path, id, body, overrideToken) => {
   return { status: response.status, body: await response.json() };
 };
 const noHash = (response) => assert.doesNotMatch(JSON.stringify(response.body), /"password"|\$2[aby]\$/);
+
+test('software read failures do not expose database internals', async () => {
+  for (const route of ['/api/software', '/api/software/1']) {
+    const result = await request('GET', route, 3);
+    assert.equal(result.status, 500);
+    assert.doesNotMatch(JSON.stringify(result.body), /private database detail/);
+  }
+});
 
 test('login succeeds and returns a token without a password hash', async () => {
   const result = await request('POST', '/api/auth/login', null, { email: 'viewer@test.invalid', password: 'test-password' });

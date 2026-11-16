@@ -135,10 +135,65 @@ test('real PostgreSQL migrations and employee/license workflows', async () => {
       .rows[0].count, 0);
     const software = (await pool.query(`INSERT INTO software (name, category, price_per_seat)
       VALUES ('Synthetic Tool', 'Testing', 12) RETURNING id`)).rows[0];
+    const duplicateSoftware = await request(server, 'POST', '/api/software',
+      { name: 'Synthetic Tool', category: 'Testing', price_per_seat: '12.00' }, token);
+    assert.equal(duplicateSoftware.status, 409);
+    assert.equal(duplicateSoftware.body.error, 'Software name already exists');
     const license = await request(server, 'POST', '/api/licenses',
       { employee_id: employeeId, software_id: software.id }, token);
     assert.equal(license.status, 201);
     assert.equal(license.body.data.employee_id, employeeId);
+    const managerAccount = await request(server, 'POST', '/api/users',
+      { name: 'Matrix Manager', email: 'matrix-manager@test.invalid', password: 'matrix-manager-password' }, token);
+    assert.equal(managerAccount.status, 201);
+    assert.equal((await request(server, 'PATCH', `/api/users/${managerAccount.body.data.id}/role`,
+      { role: 'manager' }, token)).status, 200);
+    const managerLogin = await request(server, 'POST', '/api/auth/login',
+      { email: 'matrix-manager@test.invalid', password: 'matrix-manager-password' });
+    assert.equal(managerLogin.status, 200);
+    const managerToken = managerLogin.body.token;
+    const viewerToken = login.body.token;
+    const sharedReads = ['/api/stats/home', '/api/dashboard', '/api/dashboard/stats',
+      '/api/dashboard/summary', '/api/employees', `/api/employees/${employeeId}`,
+      '/api/software', `/api/software/${software.id}`, '/api/licenses',
+      `/api/licenses/${license.body.data.id}`, '/api/licenses/idle/list',
+      '/api/licenses/dashboard/metrics'];
+    const adminReads = ['/api/users', '/api/admin/users', '/api/admin/stats',
+      '/api/admin/audit-logs', '/api/admin/system-health'];
+    for (const route of sharedReads) {
+      assert.equal((await request(server, 'GET', route)).status, 401, route);
+      for (const roleToken of [viewerToken, managerToken, token])
+        assert.equal((await request(server, 'GET', route, undefined, roleToken)).status, 200, route);
+    }
+    for (const route of adminReads) {
+      assert.equal((await request(server, 'GET', route)).status, 401, route);
+      for (const roleToken of [viewerToken, managerToken])
+        assert.equal((await request(server, 'GET', route, undefined, roleToken)).status, 403, route);
+      assert.equal((await request(server, 'GET', route, undefined, token)).status, 200, route);
+    }
+    const mutations = [
+      ['POST', '/api/employees', {}], ['PUT', '/api/employees/999999', {}],
+      ['DELETE', '/api/employees/999999'], ['POST', '/api/software', {}],
+      ['PUT', '/api/software/999999', {}], ['DELETE', '/api/software/999999'],
+      ['POST', '/api/licenses', {}], ['PUT', '/api/licenses/999999', {}],
+      ['POST', '/api/licenses/999999/prune'], ['DELETE', '/api/licenses/999999'],
+      ['POST', '/api/users', {}], ['PATCH', '/api/users/999999/role', { role: 'admin' }],
+      ['PUT', '/api/users/999999', {}], ['DELETE', '/api/users/999999'],
+      ['PATCH', '/api/admin/users/999999/role', { role: 'admin' }],
+      ['DELETE', '/api/admin/users/999999'],
+    ];
+    for (const [method, route, body] of mutations) {
+      assert.equal((await request(server, method, route, body)).status, 401, route);
+      assert.equal((await request(server, method, route, body, viewerToken)).status, 403, route);
+      const managerStatus = (await request(server, method, route, body, managerToken)).status;
+      assert.equal(managerStatus === 403, !['POST /api/employees', 'PUT /api/employees/999999',
+        'DELETE /api/employees/999999', 'POST /api/software', 'PUT /api/software/999999',
+        'POST /api/licenses', 'PUT /api/licenses/999999'].includes(`${method} ${route}`), route);
+      assert.ok(managerStatus < 500, route);
+      const adminStatus = (await request(server, method, route, body, token)).status;
+      assert.ok(adminStatus >= 400 && adminStatus < 500 && adminStatus !== 401 && adminStatus !== 403,
+        `${route}: expected validation or missing-record response for admin, received ${adminStatus}`);
+    }
     assert.equal((await request(server, 'DELETE', `/api/employees/${employeeId}`, undefined, token)).status, 409);
     await assert.rejects(pool.query('DELETE FROM employees WHERE id = $1', [employeeId]), { code: '23001' });
     await assert.rejects(pool.query(`INSERT INTO licenses (employee_id, software_id)

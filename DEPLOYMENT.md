@@ -31,15 +31,13 @@ cd backend
 npm run migrate
 ```
 
-3. Seed demo data:
+3. Bootstrap the first administrator with explicit, private `ADMIN_BOOTSTRAP_NAME`, `ADMIN_BOOTSTRAP_EMAIL`, and `ADMIN_BOOTSTRAP_PASSWORD` values. The password must have at least 12 characters. Verify the database target before running:
 
 ```bash
-npm run seed:demo
+npm run seed:admin
 ```
 
-This creates demo credentials:
-- Email: `admin@company.com`
-- Password: `demo123`
+Public registration is disabled. `seed:demo` is an optional, development-only synthetic inventory seed; it creates no login accounts and must not run as part of deployment.
 
 ## 3. Backend Deployment
 
@@ -53,7 +51,6 @@ Build / start commands:
 cd backend
 npm install
 npm run migrate
-npm run seed:demo
 npm start
 ```
 
@@ -92,7 +89,7 @@ If you use multiple origins, set `FRONTEND_URL` as a comma-separated list.
 
 ## 6. Verification Checklist
 
-- Login works with demo or seeded credentials.
+- Login works with the explicitly bootstrapped administrator credentials.
 - Dashboard loads without hard-coded localhost URLs.
 - User, software, and license tables render with real data.
 - Admin routes work for admin users only.

@@ -286,13 +286,15 @@ npm test
 npm run test:integration:postgres
 ```
 
-The repository also contains dedicated isolated test harnesses for the demo seed and browser QA. Check the current scripts and their database-targeting safeguards before running them:
+The canonical full browser QA command builds the frontend, starts a freshly initialized and identity-verified disposable PostgreSQL cluster, migrates and bootstraps a synthetic administrator, then runs the application, landing, and authentication browser checks. Screenshots and cluster files are retained under `%TEMP%` for review; the persistent development database is never targeted. From `backend/`:
 
 ```powershell
 # From backend/
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runDemoSeedIntegration.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runBrowserQa.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/runIsolatedBrowserQa.ps1
 ```
+
+The landing and authentication scripts can also be run separately from `frontend/` after `npm run build` with `node scripts/landingQa.mjs` and `node scripts/authQa.mjs`. They are read-only public-page checks and write screenshots under the system temporary directory by default. The full browser harness uses a same-origin `/api` proxy on explicit loopback addresses.
 
 From `frontend/`:
 

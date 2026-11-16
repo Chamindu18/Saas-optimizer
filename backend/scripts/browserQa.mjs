@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { readFile, stat, mkdir, writeFile } from 'node:fs/promises';
 import { join, extname, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import app from '../app.js';
 import pool from '../config/db.js';
 
@@ -14,16 +15,33 @@ const cdpPort = 47891;
 const siteOrigin = `http://${loopbackHost}:${sitePort}`;
 const apiOrigin = `http://${loopbackHost}:${apiPort}`;
 const cdpOrigin = `http://${loopbackHost}:${cdpPort}`;
+const screenshotDir = resolve(process.env.SEATWATCH_QA_SCREENSHOTS_DIR || join(tmpdir(), 'seatwatch-browser-qa-screenshots'));
+let shuttingDown = false;
+const proxyRequests = new Set();
 const site = createServer(async (req, res) => {
   const pathname = new URL(req.url, siteOrigin).pathname;
   if (pathname.startsWith('/api/')) {
-    const response = await fetch(`${apiOrigin}${req.url}`, {
-      method: req.method,
-      headers: { authorization: req.headers.authorization || '', 'content-type': req.headers['content-type'] || 'application/json' },
-      ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: req, duplex: 'half' } : {}),
-    });
-    res.writeHead(response.status, { 'content-type': response.headers.get('content-type') || 'application/json' });
-    res.end(Buffer.from(await response.arrayBuffer()));
+    const controller = new AbortController();
+    proxyRequests.add(controller);
+    try {
+      const response = await fetch(`${apiOrigin}${req.url}`, {
+        method: req.method,
+        headers: { authorization: req.headers.authorization || '', 'content-type': req.headers['content-type'] || 'application/json' },
+        ...(req.method !== 'GET' && req.method !== 'HEAD' ? { body: req, duplex: 'half' } : {}),
+        signal: controller.signal,
+      });
+      res.writeHead(response.status, { 'content-type': response.headers.get('content-type') || 'application/json' });
+      res.end(Buffer.from(await response.arrayBuffer()));
+    } catch (error) {
+      if (!shuttingDown) {
+        console.error('QA same-origin proxy failed:', error.message);
+        process.exitCode = 1;
+        if (!res.destroyed) {
+          if (!res.headersSent) res.writeHead(502);
+          res.end();
+        }
+      }
+    } finally { proxyRequests.delete(controller); }
     return;
   }
   let file = resolve(buildDir, `.${pathname}`);
@@ -82,7 +100,7 @@ async function clickButton(label) {
 }
 async function fill(label, value) {
   const filled = await run((label, value) => {
-    const input = [...document.querySelectorAll('input')].find(e => e.name === label || e.type === label || e.placeholder === label || e.parentElement?.textContent?.includes(label));
+    const input = [...document.querySelectorAll('input')].find(e => e.name === label || e.type === label || [...e.labels].some(associated => associated.textContent.trim() === label));
     if (!input) return false;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     setter.call(input, value); input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true }));
@@ -110,7 +128,6 @@ async function select(id, value) {
 }async function capture(name, width) {
   await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
   await delay(180);
-  const screenshotDir = resolve('../frontend/qa-screenshots');
   await mkdir(screenshotDir, { recursive: true });
   const layout = await send('Page.getLayoutMetrics');
   const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
@@ -254,7 +271,7 @@ try {
     assert.equal(accounts.status, 200);
     assert.ok((accounts.body.data || accounts.body).some(x => x.email === 'account@seatwatch.test.invalid' && x.role === 'viewer'));
   });
-  for (const width of [390, 768, 1024, 1440]) {
+  for (const width of [390, 768, 1024, 1440, 1680]) {
     await check(`administration ${width}px account, role, and audit layout`, async () => {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
       await goto('/admin'); await waitFor(() => !!document.querySelector('.sw-management__table'));
@@ -418,7 +435,7 @@ try {
     assert.equal((await request('/software', 'POST', { name: `Synthetic ${'Long Product Name '.repeat(5)}`.trim(), category: 'Long category label for layout verification', price_per_seat: 99999999.99 })).status, 201);
     assert.equal((await request('/software', 'POST', { name: 'Synthetic Zero Price Product', category: 'QA', price_per_seat: 0 })).status, 201);
   });
-  for (const width of [390, 768, 1024, 1440]) {
+  for (const width of [390, 768, 1024, 1440, 1680]) {
     await check(`${width}px viewport renders landing and management`, async () => {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
       for (const path of ['/home','/dashboard','/licenses']) {
@@ -447,7 +464,7 @@ try {
       }
     });
   }
-  for (const width of [390, 768, 1024, 1440]) {
+  for (const width of [390, 768, 1024, 1440, 1680]) {
     await check(`${width}px employee and software management layout`, async () => {
       await send('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 1, mobile: width === 390 });
       for (const path of ['/employees', '/software']) {
@@ -457,7 +474,6 @@ try {
         const overflow = await run(() => document.documentElement.scrollWidth - innerWidth);
         assert.ok(overflow <= 2, `${path} overflows by ${overflow}px`);
         assert.ok(await run(() => document.querySelector('.sw-management__table-scroll').scrollWidth >= document.querySelector('.sw-management__table-scroll').clientWidth));
-        const screenshotDir = resolve('../frontend/qa-screenshots');
         await mkdir(screenshotDir, { recursive: true });
         const layout = await send('Page.getLayoutMetrics');
         const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true,
@@ -495,7 +511,10 @@ try {
   console.log(`Expected HTTP errors observed: ${httpErrors.join(', ')}`);
   if (consoleErrors.length) console.log(`Console samples: ${consoleErrors.slice(0,3).join(' | ')}`);
   if (failed.length) console.log(`Network samples: ${failed.slice(0,3).join(' | ')}`);
-  if (results.some(r => r.startsWith('FAIL'))) process.exitCode = 1;
+  if (results.some(r => r.startsWith('FAIL')) || consoleErrors.length || failed.length) process.exitCode = 1;
 } finally {
-  ws?.close(); edge.kill(); api.closeAllConnections(); site.closeAllConnections(); api.close(); site.close(); await pool.end();
+  shuttingDown = true;
+  ws?.close(); edge.kill();
+  for (const controller of proxyRequests) controller.abort();
+  site.closeAllConnections(); site.close(); api.closeAllConnections(); api.close(); await pool.end();
 }

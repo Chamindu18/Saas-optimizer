@@ -56,7 +56,7 @@ const createSoftware = async (softwareData) => {
   try {
     // Validation
     if (!softwareData.name || !softwareData.category || softwareData.price_per_seat === undefined) {
-      throw new Error('Name, category, and price per seat are required');
+      throw httpError(400, 'Name, category, and price per seat are required');
     }
 
     if (!validPrice(softwareData.price_per_seat)) throw httpError(400, 'Price must be a nonnegative monthly amount with at most two decimals');
@@ -65,6 +65,7 @@ const createSoftware = async (softwareData) => {
     return newSoftware;
   } catch (error) {
     if (error.status) throw error;
+    if (error.code === '23505') throw httpError(409, 'Software name already exists');
     throw new Error(`Failed to create software: ${error.message}`);
   }
 };

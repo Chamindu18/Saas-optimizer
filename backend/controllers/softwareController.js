@@ -21,10 +21,7 @@ const getSoftware = async (req, res) => {
       count: software.length,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
@@ -49,10 +46,7 @@ const getSoftwareById = async (req, res) => {
       data: software,
     });
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
@@ -113,16 +107,14 @@ const updateSoftware = async (req, res) => {
       data: updatedSoftware,
     });
   } catch (error) {
+    if (error.status) return respondError(res, error);
     if (error.message.includes('not found')) {
       return res.status(404).json({
         success: false,
         error: error.message,
       });
     }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 
@@ -149,10 +141,7 @@ const deleteSoftware = async (req, res) => {
         error: error.message,
       });
     }
-    res.status(400).json({
-      success: false,
-      error: error.message,
-    });
+    return respondError(res, error);
   }
 };
 

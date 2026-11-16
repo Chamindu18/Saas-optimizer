@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { resolve, join, extname } from 'node:path';
@@ -23,6 +24,7 @@ let socket, nextId = 0;
 const pending = new Map();
 const errors = [];
 const failedRequests = [];
+const screenshotDir = resolve(process.env.SEATWATCH_QA_SCREENSHOTS_DIR || join(tmpdir(), 'seatwatch-browser-qa-screenshots'), 'auth');
 function send(method, params = {}) {
   const id = ++nextId;
   return new Promise((resolve, reject) => {
@@ -58,7 +60,7 @@ try {
     if (message.method === 'Network.loadingFailed') failedRequests.push(message.params.errorText);
   });
   await send('Page.enable'); await send('Runtime.enable'); await send('Network.enable');
-  await mkdir(resolve('qa-screenshots/auth'), { recursive: true });
+  await mkdir(screenshotDir, { recursive: true });
   for (const route of ['login', 'register']) for (const width of [390, 768, 1024, 1440, 1680]) {
     await send('Emulation.setDeviceMetricsOverride', { width, height: 900, deviceScaleFactor: 1, mobile: width === 390 });
     await send('Page.navigate', { url: `${origin}/${route}` });
@@ -80,7 +82,7 @@ try {
     else assert.ok(result.formCount === 0 && result.labels.length === 0 && /administrator/i.test(result.heading));
     const layout = await send('Page.getLayoutMetrics');
     const shot = await send('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip: { x: 0, y: 0, width, height: Math.ceil(layout.cssContentSize.height), scale: 1 } });
-    await writeFile(join(resolve('qa-screenshots/auth'), `${route}-${width}.png`), Buffer.from(shot.data, 'base64'));
+    await writeFile(join(screenshotDir, `${route}-${width}.png`), Buffer.from(shot.data, 'base64'));
     if (width === 390 && route === 'login') {
       await run(() => { const toggle = document.querySelector('.input-toggle-password'); toggle.focus(); toggle.click(); });
       assert.ok(await run(() => document.querySelector('input[name="password"]').type === 'text' && document.activeElement === document.querySelector('.input-toggle-password')), `${route} password visibility and focus`);

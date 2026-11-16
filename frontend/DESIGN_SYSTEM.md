@@ -17,13 +17,13 @@ The `--sw-*` variables define canvas, surfaces, text, accent, status colors, foc
 - `Dialog` and `Sheet`: controlled open state, title, Radix focus containment, Escape dismissal, and focus return.
 - `DropdownMenu`: keyboard menu for account actions.
 - `Card` and `Badge`: scoped surface and status styling.
-- `Tabs`: Radix tabs for future page migration. The active admin tabs use native tab roles and arrow/Home/End handling so the existing browser workflow remains compatible.
+- `Tabs`: Radix tab primitive for potential future use. The active administration sections use route links with `aria-current="page"`.
 
 The active management modal keeps its old props while using the new Dialog internally. Active common and authentication inputs now associate labels and errors. This lets management forms keep their API and validation behavior.
 
-## Legacy compatibility and next work
+## Legacy compatibility
 
-`index.css`, `design-system.css`, the old `components/ui` and `components/common` files, and page CSS remain because live routes still import them. Obsolete `components/styles/Sidebar.css` and `Header.css` are left in place pending a verified cleanup. Task 08B can redesign dashboard content using real statistics. Task 08C should migrate page tables, repeated row actions, remaining dialogs, legacy tokens, and page-specific CSS, then remove unused component/CSS files after checking consumers. The current dashboard cards and management-page spacing are intentionally still legacy.
+`index.css`, `design-system.css`, older `components/ui` and `components/common` files, and page CSS remain because some live routes still import them. This document records the incremental Task 08A decision; later dashboard and management work has been completed. Do not delete legacy files without checking active imports.
 
 ## Public authentication pages (Task 08C-5)
 
@@ -31,4 +31,4 @@ Login and registration share `src/pages/AuthShell.jsx` and scoped `src/pages/sty
 
 The old submit buttons used `components/ui/Button.jsx`, which emits `btn btn-primary`. The active `App.css` `.btn-primary` background references undefined `--color-accent`, so its intended fill is discarded; the legacy registration CSS also used old variables and a full-height mobile panel. Authentication now uses a scoped `sw-auth__submit` style with an explicit tokenized background and white text. The legacy button remains unchanged for other consumers.
 
-Authentication pages import `components/ui/Input.jsx` explicitly. An extensionless import had resolved to `Input.js`, a different legacy component that lacks a password toggle. The JSX input associates labels and error descriptions, announces field errors, and offers a keyboard-accessible visibility button. Form errors use text in an alert region; no HTML insertion is used. Registration explains that public signup provides viewer access to the current shared organizational workspace and that an admin manages change permissions. It does not imply workspace isolation or a new subscription. The backend still controls authentication and authorization.
+Authentication pages import `components/ui/Input.jsx` explicitly. An extensionless import had resolved to `Input.js`, a different legacy component that lacks a password toggle. The JSX input associates labels and error descriptions, announces field errors, and offers a keyboard-accessible visibility button. Form errors use text in an alert region; no HTML insertion is used. The `/register` route now explains administrator-provided access; public signup is disabled. The backend controls authentication and authorization in one shared organizational workspace.

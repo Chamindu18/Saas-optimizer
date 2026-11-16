@@ -1,8 +1,8 @@
 @import "tailwindcss/theme";
 @import "tailwindcss/utilities";
 
-/* Task 08A: authoritative tokens for new shell and shared primitives.
-   Legacy page CSS still uses older variables until page migration in 08C. */
+/* Authoritative tokens for the SeatWatch shell and shared primitives.
+   Some active page CSS retains older variables for compatibility. */
 :root {
   --sw-canvas: #f8fafc;
   --sw-surface: #ffffff;

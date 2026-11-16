@@ -1,78 +1,34 @@
-# Project Status Report
+# SeatWatch project status
 
-Date: 2026-05-08
+Updated: 2026-11-16, Task 09C review. This is a portfolio MVP status, not a production security certification.
 
-## Executive Summary
-The project is a full-stack SaaS license management platform with a Node/Express/PostgreSQL backend and a React (CRA) frontend. It has strong building blocks (auth, admin metrics, idle detection, design system work), but the codebase is inconsistent across API contracts, auth storage keys, UI component systems, and routing. These inconsistencies currently prevent end-to-end flows from working and introduce security/config risks.
+## Implemented
 
-## Architecture Snapshot
-- Backend: Express app with controllers/services/models, PostgreSQL via `pg`, cron-based idle license checks.
-- Frontend: CRA React app with multiple UI systems ("common" vs "ui" components) and two design systems, plus mixed API usage (axios + fetch).
-- Auth: JWT with role-based access control.
+- React 19 / Vite 7 frontend with responsive public, authentication, dashboard, employee, software, license, and administration routes.
+- Express / PostgreSQL API with migrations 000–003, account and employee separation, JWT authentication, server-side Viewer/Manager/Admin authorization, and administrator-controlled account provisioning. Public registration is disabled.
+- Active, idle, and pruned license lifecycle. Idle classification uses 30 elapsed days from application-recorded activity. Spending and potential savings are estimates from stored seat prices, without a verified currency or provider synchronization.
+- Secure first-administrator bootstrap with explicit variables and a development-only synthetic inventory seed that previews changes by default.
+- Login throttling of 10 failed requests per client IP per 15 minutes, with explicit trusted proxy CIDRs.
 
-## Primary Risks
-- Contract mismatch between frontend API calls and backend routes/response shapes.
-- Token storage keys inconsistent across the frontend; role decoding is unreliable.
-- Missing core database schema migration for users/software/licenses.
-- Admin and audit pages exist but are not wired to routes.
-- CORS configuration allows `*` with credentials.
-- JWT secret fallback in production paths.
+## Verified through Task 09B
 
-## Functional Gaps (Missing or Broken)
-### Backend
-- Core schema migration for users, software, licenses (tables, FK constraints, indexes).
-- Validation layer for request payloads (currently ad-hoc in services/controllers).
-- Partial update safety for licenses (current update overwrites with undefined fields).
-- Consistent API response shapes across controllers.
+Backend unit tests: 34/34; isolated PostgreSQL integration and demo seed safety: passed; frontend unit tests: 57/57; production build: passed; comprehensive application browser QA: 41/41. Landing and authentication QA passed at 390, 768, 1024, 1440, and 1680 px.
 
-### Frontend
-- API client definitions mismatch actual endpoints (`admin`, `users`, `licenses`).
-- Role/token storage mismatch (`auth_token` vs `seatwatch_token`).
-- Admin / Role Management / Audit Log pages not routed.
-- Duplicate UI component systems and design tokens create inconsistent UX.
-- Hard-coded API URLs in multiple pages.
+Task 09C repeated these suites successfully. Application browser QA passed 42/42 checks after adding a login keyboard order, focus, and validation-announcement check; dedicated landing and authentication QA also passed at all five widths. These results cover tested local fixtures and flows only.
 
-### Docs & Repo Hygiene
-- Root README is not aligned with current behavior and env config.
-- No root `.gitignore`, no root `LICENSE`.
-- Missing root `.env.example` with required variables.
+## Remaining risks and review gaps
 
-## Security Review
-- JWT secret falls back to hard-coded value.
-- CORS uses `*` with credentials.
-- Token stored in localStorage (acceptable for portfolio, but needs explicit risk note and XSS hygiene).
-- No input validation middleware or rate limiting.
+- Complete keyboard traversal, contrast, zoom/reflow, and actual screen-reader usability have not been established by the existing QA suite. Automated semantic checks cannot substitute for a real screen reader.
+- Browser-held JWTs create XSS-related session exposure risk. Review the seven-day token lifetime and session response for the intended deployment.
+- The login limiter is process-local and resets on restart; multi-instance use needs a shared store. Proxy IP handling and forwarded headers require verification in the real hosting path.
+- Audit logging is best effort and is not an immutable or complete compliance trail.
+- The backend dependency audit has reported moderate `node-cron` → `uuid` advisories. Recheck the exact installed tree before release; a node-cron upgrade requires scheduling compatibility review.
+- The application is a shared organizational workspace. It has no tenant isolation, provider activity sync, subscription cancellation, invoice verification, or realized-savings measurement.
 
-## Observed Inconsistencies
-- Frontend calls `/admin/health`, backend serves `/admin/system-health`.
-- Frontend expects `activeCount` and `savingsPercentage`, backend returns `activeLicenses` and no percentage.
-- Frontend admin API helper methods do not exist in backend.
+## Task 09D: deployment readiness
 
-## Immediate Priorities (P0)
-1. Align API contracts end-to-end (routes + response shapes + frontend API client).
-2. Standardize auth token/user storage and role decoding.
-3. Add core database schema migration and seed/demo data.
-4. Fix unsafe CORS and remove JWT fallback.
+Choose and review hosting topology; configure HTTPS, secrets, PostgreSQL connectivity and backups, frontend API origin/CORS, reverse proxy CIDRs, and production logging. Review JWT/session and rate limiting for that topology. Apply migrations to a reviewed target, bootstrap privately, and run production smoke and accessibility checks. Do not infer production readiness from the disposable local harness.
 
-## Near-Term Priorities (P1)
-1. Consolidate UI component system and design tokens.
-2. Wire all pages into the router; remove dead pages.
-3. Standardize empty/loading/error states.
+## Deferred enhancements
 
-## Deferred (P2)
-1. Add rate limiting and request validation middleware.
-2. Add tests (unit + API integration).
-3. Add deployment docs and scripts.
-
-## Proposed Roadmap
-- Phase A: API + Auth Alignment
-- Phase B: Schema + Seed Data
-- Phase C: UI Consolidation + Routing
-- Phase D: Documentation + Deployment
-
-## Definition of Done (Portfolio Quality)
-- All key flows work: login, dashboard, user/software/license CRUD, admin stats, audit log.
-- Consistent UI system and design tokens across app.
-- Clean, documented README and deployment guide.
-- No hard-coded secrets; .env.example provided at repo root.
-- Lint/build passes and minimal console noise.
+Potential future work includes a shared rate-limit store, stronger session management, account recovery, vendor integrations, currency modeling, and tenant isolation. None is implemented or required for the current portfolio MVP.

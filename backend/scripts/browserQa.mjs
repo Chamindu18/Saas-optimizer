@@ -98,6 +98,12 @@ async function clickButton(label) {
   }, label);
   assert.ok(clicked, `Button ${label} exists`);
 }
+async function pressKey(key, code = key, modifiers = 0) {
+  const windowsVirtualKeyCode = key === 'Tab' ? 9 : key === 'Enter' ? 13 : key === 'Escape' ? 27 : 0;
+  await send('Input.dispatchKeyEvent', { type: 'keyDown', key, code, windowsVirtualKeyCode, modifiers,
+    ...(key === 'Enter' ? { text: '\r', unmodifiedText: '\r' } : {}) });
+  await send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, windowsVirtualKeyCode, modifiers });
+}
 async function fill(label, value) {
   const filled = await run((label, value) => {
     const input = [...document.querySelectorAll('input')].find(e => e.name === label || e.type === label || [...e.labels].some(associated => associated.textContent.trim() === label));
@@ -191,6 +197,26 @@ try {
     assert.equal((await pool.query("SELECT COUNT(*)::int AS count FROM users WHERE email = 'denied@seatwatch.test.invalid'")).rows[0].count, 0);
   });
   await goto('/login');
+  await check('login keyboard order, focus visibility, and validation announcements', async () => {
+    await waitFor(() => !!document.querySelector('input[name="email"]'));
+    await run(() => { document.body.tabIndex = -1; document.body.focus(); });
+    for (const expected of ['SeatWatch home', 'Back to home', 'email', 'password', 'Show password', 'Sign in']) {
+      await pressKey('Tab');
+      const active = await run(() => ({ name: document.activeElement?.getAttribute('aria-label') || document.activeElement?.getAttribute('name') || document.activeElement?.textContent?.trim(), visible: document.activeElement?.matches(':focus-visible'), outline: getComputedStyle(document.activeElement).outlineStyle }));
+      assert.equal(active.name, expected);
+      assert.equal(active.visible, true);
+      assert.notEqual(active.outline, 'none');
+    }
+    await pressKey('Tab', 'Tab', 8);
+    assert.equal(await run(() => document.activeElement?.getAttribute('aria-label')), 'Show password');
+    await pressKey('Tab');
+    await pressKey('Enter');
+    await waitFor(() => document.querySelectorAll('.input-error-message[role="alert"]').length === 2).catch(async error => {
+      const state = await run(() => ({ active: document.activeElement?.outerHTML?.slice(0, 200), alerts: [...document.querySelectorAll('[role="alert"]')].map(element => element.textContent) }));
+      throw new Error(`${error.message}: ${JSON.stringify(state)}`);
+    });
+    assert.ok(await run(() => [...document.querySelectorAll('input')].filter(input => input.getAttribute('aria-invalid') === 'true' && input.getAttribute('aria-describedby')).length === 2));
+  });
   await check('admin provisions viewer through authorized account endpoint', async () => {
     await fill('email', process.env.ADMIN_BOOTSTRAP_EMAIL);
     await fill('password', process.env.ADMIN_BOOTSTRAP_PASSWORD);

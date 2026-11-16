@@ -17,10 +17,16 @@ backend/.env
 frontend/.env
 
 # Logs
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+
+# Local database exports
+*.dump
+*.bak
+*.sql.gz
 
 # OS / editor
 .DS_Store

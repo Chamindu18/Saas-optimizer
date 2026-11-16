@@ -15,17 +15,12 @@ SeatWatch is a full-stack, role-based application for managing software products
 - **Utilization review:** A license becomes idle at **30 elapsed 24-hour days** since `last_active_date`. The activity dates are manually recorded, not provider-verified.
 - **Spend overview:** View current estimated monthly spending, idle-license potential savings, active/idle/pruned counts, and spending by category.
 - **Administration:** Manage login accounts and roles; review available audit entries and system-health views.
-- **Accessible interface:** Responsive application shell, keyboard-operable dialogs and navigation, semantic tables, visible focus states, and reduced-motion support.
+- **Accessibility foundations:** Responsive shell, labelled form controls, semantic tables, Radix dialogs, visible focus styles, and reduced-motion support. Full keyboard and screen-reader usability still need release verification.
 - **Reproducible local development:** Versioned SQL migrations, isolated PostgreSQL integration/browser tests, and an opt-in synthetic demo-data seed.
 
 ## Screenshots
 
-Add sanitized screenshots from the finished UI when publishing the repository. Do not include personal account details, session tokens, database credentials, or browser address bars.
-
-<!-- Suggested images after reviewing and adding them to the repository:
-![SeatWatch dashboard](docs/images/dashboard.png)
-![License management](docs/images/licenses.png)
--->
+Historical, synthetic browser QA captures are retained in [`frontend/qa-screenshots/`](frontend/qa-screenshots/). Review and sanitize any image before using it in a public portfolio presentation.
 
 ## Technology stack
 
@@ -105,7 +100,7 @@ git clone https://github.com/Chamindu18/Saas-optimizer.git
 cd Saas-optimizer
 ```
 
-For an existing local checkout, use your project directory instead (for example, `D:\projects\SaaS`).
+For an existing local checkout, open that checkout's project root instead.
 
 ### 2. Create a dedicated development database
 
@@ -145,7 +140,7 @@ FRONTEND_URL=http://localhost:5173
 
 - Replace placeholders privately. URL-encode special characters in the database password when using `DATABASE_URL`.
 - Use a long, random JWT secret. Never commit `.env`, credentials, or database dumps.
-- Older `.env.example` copies may still mention CRA's former `localhost:3000` port; Vite normally serves locally at **5173**.
+- Vite normally serves locally at **5173**; configure `FRONTEND_URL` for that origin or the actual frontend origin.
 - Check the final resolved database host, user, and name **before** running migrations or seed operations.
 
 ### 4. Apply schema migrations
@@ -350,7 +345,7 @@ The application has undergone incremental work on account security, employee/acc
 
 Additional work to prioritize:
 
-- Verify Login and the administrator-provided access screen against the same design system as the rest of the app.
+- Complete hands-on keyboard, contrast, zoom/reflow, and screen-reader checks in the intended browser and assistive technology.
 - Review session lifetime, browser token storage, and distributed login throttling before exposing the shared workspace externally.
 - Complete keyboard, screen-reader, contrast, performance, and security release reviews.
 - Validate hosting configuration, API proxying, database backups, and environment isolation.

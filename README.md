@@ -322,6 +322,8 @@ The integration/browser harnesses are designed to use disposable, locally verifi
 
 ## Deployment considerations
 
+Hosting is outside this GitHub-only, locally runnable portfolio MVP. The notes below are reference material for any future deployment.
+
 The production frontend is built with:
 
 ```powershell
@@ -341,17 +343,10 @@ See [`DEPLOYMENT.md`](DEPLOYMENT.md) for repository-specific deployment guidance
 
 ## Development status
 
-The application has undergone incremental work on account security, employee/account separation, PostgreSQL integrity, license lifecycle/financial correctness, Vite migration, responsive design, and browser QA. Public registration now returns 403, and the isolated full browser workflow has passed with administrator provisioning and viewer access checks. Release readiness still requires deployment-specific security and accessibility review.
+The application has undergone incremental work on account security, employee/account separation, PostgreSQL integrity, license lifecycle/financial correctness, Vite migration, responsive design, and browser QA. Public registration returns 403, and the isolated full browser workflow has passed with administrator provisioning and viewer access checks. It is complete for the local GitHub portfolio scope, subject to the accepted limitations in the project status. Any future deployment would require its own security, accessibility, and hosting review.
 
-Additional work to prioritize:
-
-- Complete hands-on keyboard, contrast, zoom/reflow, and screen-reader checks in the intended browser and assistive technology.
-- Review session lifetime, browser token storage, and distributed login throttling before exposing the shared workspace externally.
-- Complete keyboard, screen-reader, contrast, performance, and security release reviews.
-- Validate hosting configuration, API proxying, database backups, and environment isolation.
-
-See [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for the project roadmap, if maintained.
+See [`PROJECT_STATUS.md`](PROJECT_STATUS.md) for the current project status and accepted limitations.
 
 ## License
 
-No repository license is asserted here. Add a `LICENSE` file only after choosing the intended terms for reuse and distribution.
+This repository is distributed under the terms of its tracked [MIT license](LICENSE), subject to owner confirmation of the copyright attribution in that file.

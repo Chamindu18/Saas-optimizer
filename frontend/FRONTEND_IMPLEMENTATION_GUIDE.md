@@ -1,3 +1,5 @@
+> **Historical implementation notes — not current setup instructions.** The commands, port 3000, registration flow, example login, and readiness claims below are obsolete. Public registration is disabled and there are no default credentials. For current architecture, authentication policy, and local setup, see the [root README](../README.md).
+
 # SaaS Frontend - Production-Ready Implementation Guide
 
 ## 🎯 Project Overview
@@ -91,11 +93,10 @@ npm start
 
 The app will open at `http://localhost:3000`
 
-### Demo Credentials
+### Historical login example (obsolete)
 
 ```
-Email: admin@company.com
-Password: demo123
+No default login exists. Bootstrap a private administrator using the root README setup instructions.
 ```
 
 ---

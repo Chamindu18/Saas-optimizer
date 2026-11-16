@@ -1,3 +1,5 @@
+> **Historical implementation notes — not current setup instructions.** The commands, port 3000, example login, and readiness claims below are obsolete. Public registration is disabled and there are no default credentials. For current architecture, authentication policy, and local setup, see the [root README](../README.md).
+
 # Frontend Refactoring — Completion Summary
 
 ## ✅ Completed Tasks
@@ -183,7 +185,7 @@ Weights:     300 (light) → 700 (bold)
    ```bash
    npm start
    # Visit: http://localhost:3000/login
-   # Try: admin@company.com / demo123
+   # No default credentials exist; see the root README for administrator bootstrap.
    ```
 
 2. **Verify Backend Connection**

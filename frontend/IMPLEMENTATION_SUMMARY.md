@@ -1,3 +1,5 @@
+> **Historical implementation notes — not current setup instructions.** The commands, port 3000, registration flow, example login, and readiness claims below are obsolete. Public registration is disabled and there are no default credentials. For current architecture, authentication policy, and local setup, see the [root README](../README.md).
+
 # 🎉 Production-Ready Frontend Implementation - Complete Summary
 
 ## ✅ What Has Been Built
@@ -278,9 +280,8 @@ npm start
 
 The app opens at **http://localhost:3000**
 
-### Step 4: Login with Demo Credentials
-- **Email**: admin@company.com
-- **Password**: demo123
+### Step 4: Historical login step (obsolete)
+- **Login**: No default credentials exist; see the [root setup instructions](../README.md).
 
 ---
 

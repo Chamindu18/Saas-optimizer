@@ -1,3 +1,5 @@
+> **Historical implementation notes — not current setup instructions.** The commands, port 3000, example login, and readiness claims below are obsolete. Public registration is disabled and there are no default credentials. For current architecture, authentication policy, and local setup, see the [root README](../README.md).
+
 # 🎉 Frontend Refactoring Complete!
 
 ## Overview
@@ -71,9 +73,8 @@ Visit: `http://localhost:3000/login`
 
 ### 3. Test Login
 
-Use demo credentials:
-- **Email**: `admin@company.com`
-- **Password**: `demo123`
+No default login exists:
+- **Login**: No default credentials exist; see the [root setup instructions](../README.md).
 
 (Or provide your own test account)
 

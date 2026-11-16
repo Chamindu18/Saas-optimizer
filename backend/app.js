@@ -74,7 +74,7 @@ if (trustedProxies.length) app.set('trust proxy', trustedProxies);
 // ============================================
 
 // Enable CORS (allows requests from frontend)
-const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:3000')
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

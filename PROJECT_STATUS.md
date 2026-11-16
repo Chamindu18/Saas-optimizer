@@ -1,6 +1,6 @@
 # SeatWatch project status
 
-Updated: 2026-11-16, Task 09C review. This is a portfolio MVP status, not a production security certification.
+Updated: 2026-11-16, Task 09E final documentation cleanup. SeatWatch is a locally runnable, GitHub-only portfolio MVP. Cloud deployment is not a completion criterion. This status does not certify production security or accessibility.
 
 ## Implemented
 
@@ -10,25 +10,25 @@ Updated: 2026-11-16, Task 09C review. This is a portfolio MVP status, not a prod
 - Secure first-administrator bootstrap with explicit variables and a development-only synthetic inventory seed that previews changes by default.
 - Login throttling of 10 failed requests per client IP per 15 minutes, with explicit trusted proxy CIDRs.
 
-## Verified through Task 09B
+## Completed reviews
 
 Backend unit tests: 34/34; isolated PostgreSQL integration and demo seed safety: passed; frontend unit tests: 57/57; production build: passed; comprehensive application browser QA: 41/41. Landing and authentication QA passed at 390, 768, 1024, 1440, and 1680 px.
 
-Task 09C repeated these suites successfully. Application browser QA passed 42/42 checks after adding a login keyboard order, focus, and validation-announcement check; dedicated landing and authentication QA also passed at all five widths. These results cover tested local fixtures and flows only.
+Tasks 09A and 09A-1 completed the local application and security review work. Task 09C repeated the backend, frontend, PostgreSQL, demo seed, and browser suites. Application browser QA passed 42/42 checks; dedicated landing and authentication QA passed at all five widths. These results cover tested local fixtures and flows only.
+
+Task 09D final audit verdict: **PASS WITH LIMITATIONS**. It confirmed no P0 or P1 application blockers. Its baseline was backend 34/34, frontend 57/57, application browser QA 42/42, passing isolated PostgreSQL and demo seed safety checks, production frontend build, five-width landing/auth QA, 51 Node syntax checks, Markdown links, and `git diff --check`. These are historical audit results, not a claim of fresh execution.
+
+Task 09E is the final planned documentation and repository cleanup. The final Task 09E report records the checks rerun after edits.
 
 ## Remaining risks and review gaps
 
 - Complete keyboard traversal, contrast, zoom/reflow, and actual screen-reader usability have not been established by the existing QA suite. Automated semantic checks cannot substitute for a real screen reader.
-- Browser-held JWTs create XSS-related session exposure risk. Review the seven-day token lifetime and session response for the intended deployment.
-- The login limiter is process-local and resets on restart; multi-instance use needs a shared store. Proxy IP handling and forwarded headers require verification in the real hosting path.
+- Browser-held JWTs create XSS-related session exposure risk. The current token lifetime is seven days.
+- The login limiter is process-local and resets on restart; multi-instance use would need a shared store. Proxy IP handling would need verification for any future hosting path.
 - Audit logging is best effort and is not an immutable or complete compliance trail.
 - The backend dependency audit has reported moderate `node-cron` → `uuid` advisories. Recheck the exact installed tree before release; a node-cron upgrade requires scheduling compatibility review.
 - The application is a shared organizational workspace. It has no tenant isolation, provider activity sync, subscription cancellation, invoice verification, or realized-savings measurement.
 
-## Task 09D: deployment readiness
+## Completion boundary
 
-Choose and review hosting topology; configure HTTPS, secrets, PostgreSQL connectivity and backups, frontend API origin/CORS, reverse proxy CIDRs, and production logging. Review JWT/session and rate limiting for that topology. Apply migrations to a reviewed target, bootstrap privately, and run production smoke and accessibility checks. Do not infer production readiness from the disposable local harness.
-
-## Deferred enhancements
-
-Potential future work includes a shared rate-limit store, stronger session management, account recovery, vendor integrations, currency modeling, and tenant isolation. None is implemented or required for the current portfolio MVP.
+No hosting or cloud deployment is planned. After Task 09E, final working-tree review, confirmation of the generic copyright attribution in `LICENSE`, commit, and GitHub publication remain the owner's manual responsibility. Local commits appearing on remote GitHub have not been independently verified. No further development phase is required for this portfolio MVP.
